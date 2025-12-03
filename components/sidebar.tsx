@@ -21,6 +21,7 @@ import {
   Wallet,
   Video,
   ImageIcon,
+  Droplet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -54,6 +55,7 @@ export function Sidebar({ activeItem, onNavigate, unitSystem = "US", onUnitChang
     { name: "Receptionist", icon: User, id: "receptionist" },
     { name: "My Patients", icon: User, id: "patients" },
     { name: "My Calendar", icon: Calendar, id: "agenda" },
+    { name: "Phlebotomy Room", icon: Droplet, id: "phlebotomy", external: true },
     { name: "Imaging Results", icon: ImageIcon, id: "imaging" },
     { name: "Catalog", icon: BookOpen, id: "catalog" },
     { name: "Finance", icon: Wallet, id: "finance" },
@@ -63,8 +65,9 @@ export function Sidebar({ activeItem, onNavigate, unitSystem = "US", onUnitChang
   ]
 
   const handleNavigate = (item: (typeof navigation)[0]) => {
-    if (item.external && item.id === "telehealth") {
-      router.push("/telehealth")
+    if (item.external && (item.id === "telehealth" || item.id === "phlebotomy")) {
+      if (item.id === "telehealth") router.push("/telehealth")
+      if (item.id === "phlebotomy") router.push("/phlebotomy-room")
     } else {
       onNavigate(item.id)
     }

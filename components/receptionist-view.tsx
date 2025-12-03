@@ -137,7 +137,7 @@ export function ReceptionistView({ patients, setPatients }: any) {
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
   
   // States
-  const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male" })
+  const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male", phone: "", address: "", emergencyContactName: "", emergencyContactPhone: "", chiefComplaint: "", height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "" })
   const [testSearchQuery, setTestSearchQuery] = useState("")
   const [selectedTests, setSelectedTests] = useState<LabTest[]>([])
   const [showTestSearch, setShowTestSearch] = useState(false)
@@ -224,10 +224,10 @@ export function ReceptionistView({ patients, setPatients }: any) {
                     <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Patient Demographics</CardTitle></CardHeader>
                         <CardContent className="grid grid-cols-2 gap-4">
-                            <div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} className="font-bold uppercase"/></div>
-                            <div><Label className="text-xs text-slate-500">Citizen ID</Label><Input value={formData.citizenId} className="font-mono"/></div>
-                            <div><Label className="text-xs text-slate-500">DOB</Label><Input type="date" value={formData.dob}/></div>
-                            <div><Label className="text-xs text-slate-500">Gender</Label><div className="flex gap-4 pt-2"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'male'} readOnly/> Male</label><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'female'} readOnly/> Female</label></div></div>
+                            <div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div>
+                            <div><Label className="text-xs text-slate-500">Citizen ID</Label><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/></div>
+                            <div><Label className="text-xs text-slate-500">DOB</Label><Input type="date" value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})}/></div>
+                            <div><Label className="text-xs text-slate-500">Gender</Label><div className="flex gap-4 pt-2"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'male'} onChange={() => setFormData({...formData, gender: 'male'})}/> Male</label><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'female'} onChange={() => setFormData({...formData, gender: 'female'})}/> Female</label></div></div>
                         </CardContent>
                     </Card>
 
@@ -235,8 +235,8 @@ export function ReceptionistView({ patients, setPatients }: any) {
                     <Card className="border-t-4 border-t-purple-500 shadow-sm">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><MapPin className="h-4 w-4"/> Contact Info</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
-                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value="" onChange={()=>{}} /></div>
-                            <div><Label className="text-xs text-slate-500">Address</Label><Input placeholder="Street address..." /></div>
+                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value={formData.phone} onChange={(val: string) => setFormData({...formData, phone: val})} /></div>
+                            <div><Label className="text-xs text-slate-500">Address</Label><Input placeholder="Street address..." value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} /></div>
                         </CardContent>
                     </Card>
 
@@ -244,8 +244,8 @@ export function ReceptionistView({ patients, setPatients }: any) {
                     <Card className="border-t-4 border-t-amber-500 shadow-sm">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><UserPlus className="h-4 w-4"/> Emergency Contact</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
-                            <div><Label className="text-xs text-slate-500">Name</Label><Input placeholder="Relative name" /></div>
-                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value="" onChange={()=>{}} /></div>
+                            <div><Label className="text-xs text-slate-500">Name</Label><Input placeholder="Relative name" value={formData.emergencyContactName} onChange={e => setFormData({...formData, emergencyContactName: e.target.value})} /></div>
+                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value={formData.emergencyContactPhone} onChange={(val: string) => setFormData({...formData, emergencyContactPhone: val})} /></div>
                         </CardContent>
                     </Card>
 
@@ -254,15 +254,17 @@ export function ReceptionistView({ patients, setPatients }: any) {
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Clock className="h-4 w-4"/> Clinical Intake</CardTitle></CardHeader>
                         <CardContent className="grid md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <div><Label className="text-xs text-slate-500">Chief Complaint</Label><Textarea className="h-20" placeholder="Symptoms..." /></div>
+                                <div><Label className="text-xs text-slate-500">Chief Complaint</Label><Textarea className="h-20" placeholder="Symptoms..." value={formData.chiefComplaint} onChange={e => setFormData({...formData, chiefComplaint: e.target.value})} /></div>
                             </div>
                             <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
                                 <div className="text-sm font-bold text-slate-700 flex items-center gap-2"><Activity className="h-4 w-4 text-red-500"/> Vitals</div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div><Label className="text-[10px] uppercase">Height (cm)</Label><Input className="h-8 bg-white"/></div>
-                                    <div><Label className="text-[10px] uppercase">Weight (kg)</Label><Input className="h-8 bg-white"/></div>
-                                    <div><Label className="text-[10px] uppercase">Temp (°C)</Label><Input className="h-8 bg-white"/></div>
-                                    <div><Label className="text-[10px] uppercase">BP (mmHg)</Label><Input className="h-8 bg-white"/></div>
+                                    <div><Label className="text-[10px] uppercase">Height (cm)</Label><Input className="h-8 bg-white" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})}/></div>
+                                    <div><Label className="text-[10px] uppercase">Weight (kg)</Label><Input className="h-8 bg-white" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})}/></div>
+                                    <div><Label className="text-[10px] uppercase">Temp (°C)</Label><Input className="h-8 bg-white" value={formData.temp} onChange={e => setFormData({...formData, temp: e.target.value})}/></div>
+                                    <div><Label className="text-[10px] uppercase">BP (mmHg)</Label><Input className="h-8 bg-white" value={formData.bp} onChange={e => setFormData({...formData, bp: e.target.value})}/></div>
+                                    <div><Label className="text-[10px] uppercase">Pulse (bpm)</Label><Input className="h-8 bg-white" value={formData.pulse} onChange={e => setFormData({...formData, pulse: e.target.value})}/></div>
+                                    <div><Label className="text-[10px] uppercase">SpO2 (%)</Label><Input className="h-8 bg-white" value={formData.spo2} onChange={e => setFormData({...formData, spo2: e.target.value})}/></div>
                                 </div>
                             </div>
                         </CardContent>

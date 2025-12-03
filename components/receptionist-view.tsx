@@ -290,9 +290,12 @@ export function ReceptionistView({ patients, setPatients }: any) {
                                                         {t.name}
                                                         {t.requiresConsent && <Badge variant="destructive" className="h-4 text-[10px] px-1">Consent</Badge>}
                                                     </div>
-                                                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                                                        <Clock className="h-3 w-3 text-slate-400"/>
-                                                        Result by {formatDateFriendly(getResultDate(t.turnaroundHours))}
+                                                    <div className="text-xs text-slate-500 space-y-1 mt-1">
+                                                        <div>{t.description}</div>
+                                                        <div className="flex items-center gap-2 text-slate-600 font-semibold">
+                                                            <Clock className="h-3 w-3 text-blue-500"/>
+                                                            Result by {formatDateFriendly(getResultDate(t.turnaroundHours))}
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="text-right ml-4">

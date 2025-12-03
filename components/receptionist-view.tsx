@@ -285,14 +285,17 @@ export function ReceptionistView({ patients, setPatients }: any) {
                                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-xl max-h-60 overflow-y-auto">
                                         {filteredTests.map(t => (
                                             <button key={t.id} onClick={() => addTest(t)} className="w-full px-4 py-2 text-left hover:bg-slate-50 flex justify-between items-center border-b">
-                                                <div>
+                                                <div className="flex-1">
                                                     <div className="font-bold text-sm text-slate-700 flex items-center gap-2">
                                                         {t.name}
                                                         {t.requiresConsent && <Badge variant="destructive" className="h-4 text-[10px] px-1">Consent</Badge>}
                                                     </div>
-                                                    <div className="text-xs text-slate-500">{t.description}</div>
+                                                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                                        <Clock className="h-3 w-3 text-slate-400"/>
+                                                        Result by {formatDateFriendly(getResultDate(t.turnaroundHours))}
+                                                    </div>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-right ml-4">
                                                     <div className="font-bold text-emerald-600 text-sm">{formatCurrency(t.price)}</div>
                                                 </div>
                                             </button>
@@ -349,7 +352,7 @@ export function ReceptionistView({ patients, setPatients }: any) {
                             <div className="flex justify-between items-end">
                                 <div className="text-xs text-slate-500 space-y-1">
                                     <div className="flex items-center gap-1"><Beaker className="h-3 w-3"/> {test.sampleType}</div>
-                                    <div className="flex items-center gap-1"><Clock className="h-3 w-3"/> {test.turnaroundHours}h turnaround</div>
+                                    <div className="flex items-center gap-1 font-semibold text-slate-700"><Clock className="h-3 w-3 text-blue-500"/> Result: {formatDateFriendly(getResultDate(test.turnaroundHours))}</div>
                                 </div>
                                 <div className="font-bold text-emerald-600 text-sm">{formatCurrency(test.price)}</div>
                             </div>

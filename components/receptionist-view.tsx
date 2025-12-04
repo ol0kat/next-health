@@ -20,7 +20,9 @@ import {
   PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
   Camera, Image as ImageIcon, Eye, AlertTriangle, 
   Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
-  Shield, UploadCloud, RefreshCw, Video, CalendarClock, Signal, Zap, FlaskConical
+  Shield, UploadCloud, RefreshCw, Video, CalendarClock, Signal, Zap, FlaskConical,
+  Globe,
+  Filter
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -51,6 +53,10 @@ const labTestsData: LabTest[] = [
   { id: "lipid", name: "Lipid Panel", price: 250000, category: "Biochemistry", sampleType: "Serum", turnaroundHours: 24, popular: true, description: "Cholesterol, Triglycerides" },
   { id: "syphilis", name: "Syphilis RPR", price: 150000, category: "Serology", sampleType: "Serum", turnaroundHours: 24, requiresConsent: true, description: "Screening for Syphilis" },
   { id: "dengue", name: "Dengue NS1", price: 250000, category: "Serology", sampleType: "Serum", turnaroundHours: 2, description: "Acute Dengue Fever" },
+  // Added for new intents
+  { id: "amh", name: "AMH (Anti-Mullerian Hormone)", price: 800000, category: "Hormones", sampleType: "Serum", turnaroundHours: 24, description: "Ovarian reserve testing" },
+  { id: "beta_hcg", name: "Beta HCG (Quantitative)", price: 220000, category: "Hormones", sampleType: "Serum", turnaroundHours: 4, description: "Pregnancy confirmation" },
+  { id: "fsh", name: "FSH", price: 150000, category: "Hormones", sampleType: "Serum", turnaroundHours: 24, description: "Follicle Stimulating Hormone" },
 ]
 
 const medicalIntents = [
@@ -58,6 +64,9 @@ const medicalIntents = [
     { id: "chronic_diabetes", label: "Diabetes Monitoring", recommended: ["hba1c", "lipid"], visualPrompts: [{ id: "foot_exam", label: "Foot/Ulcer Exam", icon: "foot" }, { id: "injection_site", label: "Injection Sites", icon: "skin" }] },
     { id: "fever_infection", label: "Fever & Infection", recommended: ["cbc", "dengue"], visualPrompts: [{ id: "skin_rash", label: "Skin Rash / Petechiae", icon: "skin" }, { id: "eye_exam", label: "Bloodshot Eyes / Sclera", icon: "eye" }, { id: "throat", label: "Throat / Tonsils", icon: "mouth" }] },
     { id: "std_screening", label: "STD / Sexual Health", recommended: ["hiv", "syphilis"], visualPrompts: [{ id: "lesion", label: "Visible Lesions", icon: "skin" }] },
+    // New Cases
+    { id: "fertility", label: "Fertility / IVF Support", recommended: ["amh", "fsh", "cbc"], visualPrompts: [] },
+    { id: "prenatal", label: "Prenatal Care (1st Trim)", recommended: ["cbc", "beta_hcg", "hiv", "syphilis"], visualPrompts: [] },
 ]
 
 // --- MOCK DOCTOR DATA ---
@@ -70,18 +79,37 @@ const doctorPool: Doctor[] = [
     { id: "dr3", name: "Dr. Le Chi", specialty: "Endocrinology", status: "busy", queueLength: 4, avatarColor: "bg-purple-100 text-purple-700" },
     { id: "dr4", name: "Dr. Tran Bao", specialty: "Infectious Disease", status: "online", queueLength: 2, avatarColor: "bg-amber-100 text-amber-700" },
     { id: "dr5", name: "Dr. Pham Hanh", specialty: "General Practice", status: "offline", queueLength: 0, avatarColor: "bg-slate-100 text-slate-700" },
+    { id: "dr6", name: "Dr. Sarah Smith", specialty: "OBGYN / Fertility", status: "online", queueLength: 1, avatarColor: "bg-pink-100 text-pink-700" },
 ]
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
 // --- IDENTITY CARD (Unchanged) ---
-function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryClick, internalAccess }: any) {
+function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryClick, internalAccess, isForeigner }: any) {
+    if (isForeigner) return null; // Skip for foreigners
     if (scanStep === "idle" && !data.bhyt) return null
     const isComplete = scanStep === "complete"
     return ( <div className="mb-6 animate-in fade-in slide-in-from-top-4 font-sans"><div className="bg-white border rounded-xl overflow-hidden shadow-sm"><div className={cn("px-4 py-3 flex justify-between text-white text-sm font-bold uppercase tracking-wide", isComplete ? "bg-[#009860]" : "bg-blue-600")}><div className="flex items-center gap-2">{isComplete ? <CheckCircle2 className="h-5 w-5" /> : <Loader2 className="h-4 w-4 animate-spin"/>}<span>{isComplete ? "Identity & Insurance Verified" : "Processing..."}</span></div>{isComplete && <button onClick={onClear}><X className="h-5 w-5 text-white/80 hover:text-white" /></button>}</div><div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100"><div className="p-5 space-y-4"><div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider"><User className="h-4 w-4" /> Citizen Identity</div><div><div className="font-bold text-xl text-slate-900 uppercase">{data.name || "..."}</div><div className="text-sm text-slate-500 mt-1 flex items-center gap-2"><Clock className="h-3.5 w-3.5"/> {data.dob} ({data.age} yrs)</div></div><div><div className="text-xs text-slate-400 font-bold">Citizen ID</div><div className="font-mono text-lg text-slate-700 font-medium tracking-wide mt-1">{data.citizenId}</div></div></div><div className="p-5 space-y-3 bg-slate-50/30"><div className="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-wider"><ShieldCheck className="h-4 w-4" /> BHYT & Programs</div>{data.bhyt ? (<><div><div className="text-xs text-slate-400 font-bold mb-1">Card Number</div><div className="font-bold text-xl text-blue-600 font-mono tracking-tight">{data.bhyt.code}</div></div><div className="flex justify-between items-center bg-blue-50 border border-blue-100 p-2 rounded"><div><div className="text-[10px] text-blue-600 font-bold uppercase">Chronic Condition</div><div className="text-sm font-bold text-slate-800">{data.chronicCondition || "None"}</div></div></div></>) : (<div className="h-32 flex items-center justify-center text-slate-400 italic text-sm">Verifying...</div>)}</div><div className="p-5 flex flex-col h-full justify-between bg-slate-50/50"><div className="mt-auto pt-3 border-t border-slate-200"><div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-slate-400 uppercase">Internal Records</span>{internalAccess === 'unlocked' && <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] px-1 py-0">Authorized</Badge>}</div>{internalAccess === 'locked' ? (<Button onClick={onInternalHistoryClick} disabled={!data.bhyt} variant="outline" size="sm" className="w-full h-8 text-xs border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 border-dashed"><Lock className="h-3 w-3 mr-2" /> Request Access</Button>) : (<div className="bg-emerald-50 border border-emerald-100 rounded p-2 text-center cursor-pointer hover:bg-emerald-100" onClick={onInternalHistoryClick}><div className="text-emerald-700 font-bold text-xs flex items-center justify-center gap-2"><FileText className="h-3 w-3"/> View Past Orders</div></div>)}</div></div></div></div></div>)
 }
 
-// --- VITAL SIGNS (Unchanged) ---
+// --- UNIT INPUT EXTRACTED TO FIX BUG #5 ---
+const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => ( 
+  <div className="relative">
+    <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
+    <div className="relative">
+      <Input 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        placeholder={placeholder} 
+        disabled={disabled} 
+        className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} 
+      />
+      <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
+    </div>
+  </div> 
+)
+
+// --- VITAL SIGNS ---
 function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patientAge: number | null, historicalHeight: string, nurseName: string }) {
     const { toast } = useToast()
     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "" })
@@ -91,19 +119,28 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
     const bmi = useMemo(() => { const h = parseFloat(vitals.height)/100; const w = parseFloat(vitals.weight); return (h>0 && w>0) ? (w/(h*h)).toFixed(1) : "" }, [vitals.height, vitals.weight])
     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
     const saveVitals = () => { if (!Object.values(vitals).some(val => val !== "")) return; setVitalHistory(prev => [{id: Math.random(), timestamp: new Date(), recordedBy: nurseName, bmi: bmi, ...vitals}, ...prev]); toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals(prev => ({ ...prev, weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "", height: isHeightLocked ? prev.height : "" })) }
-    const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => ( <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div> )
+    
     return ( <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden"><div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div><CardContent className="p-0"><div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={e => e.key === 'Enter' && saveVitals()}><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div><div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div><div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div></div><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div><div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div></div><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div><div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div></div><div className="p-5 flex flex-col justify-between bg-slate-50/30"><div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button></div></div>{vitalHistory.length > 0 && (<div className="border-t border-slate-100"><Table><TableHeader><TableRow className="hover:bg-transparent border-none"><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead></TableRow></TableHeader><TableBody>{vitalHistory.map((record:any) => (<TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50"><TableCell className="pl-6 py-2"><div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div></TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell><TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell><TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell></TableRow>))}</TableBody></Table></div>)}</CardContent></Card> )
 }
 
-// --- RELATED PARTIES (Unchanged) ---
+// --- RELATED PARTIES (Fixed Manual Button) ---
 function RelatedPartiesCard() {
     const { toast } = useToast()
     const [parties, setParties] = useState<any[]>([])
     const [scanRelativeStep, setScanRelativeStep] = useState<"idle" | "scanning">("idle")
+    
+    // Fix 2: Implemented Manual Add Handler
+    const handleManualRelative = () => {
+        const newPerson = { id: `rel-m-${Math.random()}`, name: "NEW RELATED PARTY", relation: "other", phone: "", citizenId: "", roles: { isEmergency: false, isGuardian: false, isPayer: false } }
+        setParties(prev => [...prev, newPerson])
+    }
+
     const handleScanRelative = () => { setScanRelativeStep("scanning"); setTimeout(() => { setScanRelativeStep("idle"); const isFirst = parties.length === 0; const newPerson = isFirst ? { id: "rel-01", name: "NGUYỄN THỊ MAI (Wife)", relation: "spouse", phone: "0909111222", citizenId: "0791...", roles: { isEmergency: true, isGuardian: false, isPayer: true } } : { id: "rel-02", name: "TRẦN MAI ANH (Daughter)", relation: "child", phone: "N/A", citizenId: "0792...", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; setParties(prev => [...prev, newPerson]); toast({ title: "Identity Linked", description: `Added ${newPerson.name} to related parties.` }) }, 1500) }
     const toggleRole = (id: string, role: string) => { setParties(prev => prev.map(p => { if (p.id !== id) return p; return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } } })) }
     const removeParty = (id: string) => setParties(prev => prev.filter(p => p.id !== id))
-    return ( <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white"><CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle><div className="flex gap-2"><Button size="sm" variant="outline" className="h-8 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button><Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan Relative ID</Button></div></CardHeader><CardContent className="p-0">{parties.length === 0 ? (<div className="p-8 text-center text-slate-400 text-sm italic">No related parties linked yet. Scan a family member's ID to link.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors"><div className="flex items-center gap-3 min-w-[200px]"><div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200")}>{party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}</div><div><div className="text-sm font-bold text-slate-800 flex items-center gap-2">{party.name}</div><div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">{party.relation} • {party.phone}</div></div></div><div className="flex flex-wrap gap-2 items-center"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><Siren className="h-3 w-3"/> Emergency Contact {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}</button><button onClick={() => toggleRole(party.id, 'isGuardian')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><FileSignature className="h-3 w-3"/> Legal Guardian</button><button onClick={() => toggleRole(party.id, 'isPayer')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><CreditCard className="h-3 w-3"/> Bill Payer</button><div className="h-4 w-px bg-slate-200 mx-1"></div><button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button></div></div>))}</div>)}</CardContent></Card> )
+    const updatePartyName = (id: string, name: string) => setParties(prev => prev.map(p => p.id === id ? { ...p, name } : p))
+
+    return ( <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white"><CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle><div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleManualRelative} className="h-8 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button><Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan Relative ID</Button></div></CardHeader><CardContent className="p-0">{parties.length === 0 ? (<div className="p-8 text-center text-slate-400 text-sm italic">No related parties linked yet. Scan a family member's ID to link.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors"><div className="flex items-center gap-3 min-w-[200px]"><div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200")}>{party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}</div><div><Input className="h-7 text-sm font-bold text-slate-800 border-none p-0 focus-visible:ring-0 bg-transparent" value={party.name} onChange={(e) => updatePartyName(party.id, e.target.value)} /><div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">{party.relation} • {party.phone || "No Phone"}</div></div></div><div className="flex flex-wrap gap-2 items-center"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><Siren className="h-3 w-3"/> Emergency Contact {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}</button><button onClick={() => toggleRole(party.id, 'isGuardian')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><FileSignature className="h-3 w-3"/> Legal Guardian</button><button onClick={() => toggleRole(party.id, 'isPayer')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><CreditCard className="h-3 w-3"/> Bill Payer</button><div className="h-4 w-px bg-slate-200 mx-1"></div><button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button></div></div>))}</div>)}</CardContent></Card> )
 }
 
 // --- VISUAL OBSERVATION (Unchanged) ---
@@ -129,26 +166,29 @@ function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuran
     return ( <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}><CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between"><CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}><Shield className="h-4 w-4"/> Private Insurance (Optional)</CardTitle><div className="flex items-center gap-2">{data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>} <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-8 text-xs" onClick={toggleActive}>{data.isActive ? "Remove" : "Add Insurance"}</Button></div></CardHeader>{data.isActive && (<CardContent className="p-5 animate-in slide-in-from-top-2"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-4"><Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label><div className="grid grid-cols-2 gap-3"><button onClick={handleScanCard} className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span></button><button className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span></button></div>{data.frontImg ? (<div className="text-[10px] text-sky-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center</div>) : (<Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}><ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)</Button>)}</div><div className="space-y-4"><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Provider</Label><Select value={data.provider} onValueChange={(val) => onChange({...data, provider: val})}><SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger><SelectContent>{providers.map(p => (<SelectItem key={p.id} value={p.id}><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", p.color)}></div>{p.name}</div></SelectItem>))}</SelectContent></Select></div><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Policy Number</Label><Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Enter or Scan..." className="font-mono bg-white"/></div><div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100"><div className="flex justify-between items-center mb-2"><Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><RefreshCw className="h-3 w-3"/> Est. Direct Billing</Label><span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span></div><Slider defaultValue={[data.estimatedCoverage]} max={1} step={0.05} onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})} className="py-2"/><div className="text-[9px] text-slate-400 mt-1 italic">*Estimate only. Final coverage pending TPA approval.</div></div></div></div></CardContent>)}</Card>)
 }
 
-// --- TELEHEALTH DISPATCH CARD (Updated with Turnaround Logic) ---
+// --- TELEHEALTH DISPATCH CARD (Fixed Specialty Filter) ---
 function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalIntent: string, requiredWaitHours: number }) {
     const { toast } = useToast()
     const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
     const [bookingState, setBookingState] = useState<'idle' | 'booking' | 'booked'>('idle')
-    const [searchQuery, setSearchQuery] = useState("")
+    
+    // Fix 6: Specialty Filter instead of search
+    const [specialtyFilter, setSpecialtyFilter] = useState("all")
+    
+    // Extract unique specialties for the filter
+    const uniqueSpecialties = useMemo(() => {
+        const specs = new Set(doctorPool.map(d => d.specialty))
+        return ["all", ...Array.from(specs)]
+    }, [])
 
     // Helper: Calculate Slot
     const getAvailabilityLabel = (dr: any) => {
         if (requiredWaitHours > 0) {
-            // If labs are ordered, everything shifts to future
             const resultDate = new Date()
             resultDate.setHours(resultDate.getHours() + requiredWaitHours)
-            
-            // Formatting logic (simplified)
             if(requiredWaitHours >= 24) return `Tomorrow, 10:00`
             if(requiredWaitHours > 0) return `Today, ${resultDate.getHours() + 1}:00` // 1 hour buffer
         }
-        
-        // If no labs, adhere to doctor's status
         if (dr.status === 'online') return "Available Now"
         if (dr.status === 'busy') return `Wait ~45m`
         return "Tomorrow"
@@ -162,18 +202,19 @@ function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalI
             docs = docs.filter(d => d.specialty === 'Endocrinology' || d.specialty === 'Internal Medicine')
         } else if (medicalIntent === 'fever_infection') {
             docs = docs.filter(d => d.specialty === 'Infectious Disease' || d.specialty === 'General Practice')
+        } else if (medicalIntent === 'fertility' || medicalIntent === 'prenatal') {
+            docs = docs.filter(d => d.specialty === 'OBGYN / Fertility')
         }
         
-        if (searchQuery) docs = docs.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter)
 
         return docs.sort((a, b) => {
              const statusScore = (s:string) => s === 'online' ? 0 : s === 'busy' ? 1 : 2
              if (statusScore(a.status) !== statusScore(b.status)) return statusScore(a.status) - statusScore(b.status)
              return a.queueLength - b.queueLength
         })
-    }, [medicalIntent, searchQuery])
+    }, [medicalIntent, specialtyFilter])
 
-    // 2. AUTO-ASSIGN
     const autoAssignedDr = useMemo(() => filteredDoctors.find(d => d.status === 'online') || filteredDoctors[0], [filteredDoctors])
 
     useEffect(() => {
@@ -202,13 +243,24 @@ function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalI
                 <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2">
                     <Video className="h-4 w-4"/> Telehealth Dispatch
                 </CardTitle>
-                <div className="flex gap-2">
-                    <Input placeholder="Search..." className="h-8 w-40 text-xs" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                <div className="flex gap-2 items-center">
+                    {/* Fix 6: Specialty Dropdown */}
+                    <Filter className="h-3 w-3 text-slate-400" />
+                    <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+                        <SelectTrigger className="h-8 text-xs w-[180px] bg-white">
+                            <SelectValue placeholder="Filter Specialty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {uniqueSpecialties.map(s => (
+                                <SelectItem key={s} value={s} className="text-xs">
+                                    {s === 'all' ? 'All Specialties' : s}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                
-                {/* LAB RESULT WARNING BANNER */}
                 {requiredWaitHours > 0 && (
                     <div className="bg-amber-50 px-4 py-2 border-b border-amber-100 flex items-center gap-2 text-xs text-amber-800">
                         <CalendarClock className="h-4 w-4 text-amber-600"/>
@@ -232,7 +284,7 @@ function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalI
                 ) : (
                     <>
                          <div className="max-h-[200px] overflow-y-auto divide-y divide-slate-50">
-                             {filteredDoctors.map(dr => {
+                             {filteredDoctors.length === 0 ? <div className="p-4 text-center text-xs text-slate-400">No doctors match this criteria.</div> : filteredDoctors.map(dr => {
                                  const isSelected = selectedDoctor === dr.id
                                  const isBestMatch = dr.id === autoAssignedDr?.id
                                  const slotLabel = getAvailabilityLabel(dr)
@@ -241,7 +293,6 @@ function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalI
                                          <div className="flex items-center gap-3">
                                              <div className={cn("h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs relative", dr.avatarColor)}>
                                                  {dr.name.split(" ").pop()?.substring(0,2)}
-                                                 {/* Logic: If waiting for labs, everyone is "Future" so we hide online dot, or make it clock */}
                                                  <div className={cn("absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white", 
                                                     requiredWaitHours > 0 ? "bg-amber-400" : (dr.status === 'online' ? "bg-green-500" : dr.status === 'busy' ? "bg-amber-500" : "bg-slate-300")
                                                  )}></div>
@@ -281,6 +332,10 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   const { toast } = useToast()
   const [scanStep, setScanStep] = useState<any>("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
+  
+  // Fix 1: Foreigner Mode State
+  const [isForeigner, setIsForeigner] = useState(false)
+  
   const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male", medicalIntent: "" })
   const [selectedTests, setSelectedTests] = useState<LabTest[]>([])
   const [testSearchQuery, setTestSearchQuery] = useState("")
@@ -292,14 +347,20 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   const [otpInput, setOtpInput] = useState("")
   const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({ provider: "", policyNumber: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false })
 
-  // CALCULATE MAX TURNAROUND TIME
   const maxTurnaroundHours = useMemo(() => {
       if (selectedTests.length === 0) return 0
-      // Find max turnaround
       return Math.max(...selectedTests.map(t => t.turnaroundHours))
   }, [selectedTests])
 
-  // LOGIC & CALCULATIONS
+  // Fix 4: Search Logic
+  const filteredTests = useMemo(() => {
+    if (!testSearchQuery) return []
+    return labTestsData.filter(t => 
+        t.name.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
+        t.id.includes(testSearchQuery.toLowerCase())
+    )
+  }, [testSearchQuery])
+
   const checkInsuranceEligibility = (test: LabTest, patient: any) => {
       let bhytResult = { isCovered: false, coveragePercent: 0, reason: "" }
       if(patient && patient.bhyt) {
@@ -332,7 +393,24 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   }, [selectedTests, scannedIdentity, privateInsurance])
 
   const processIdentityVerification = (sourceData: any) => { setScanStep("cccd"); setTimeout(() => { const verifiedData = { name: sourceData.name || formData.fullName || "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", age: 33, citizenId: sourceData.citizenId || formData.citizenId || "079192000123" }; setScannedIdentity(verifiedData); setFormData((prev: any) => ({...prev, fullName: verifiedData.name, citizenId: verifiedData.citizenId})); setScanStep("checking-bhyt"); setTimeout(() => { setScannedIdentity((prev:any) => ({ ...prev, bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" }, chronicCondition: "Type 2 Diabetes", chronicConditionCode: "E11", activeReferral: "TD-2401-99", historicalHeight: "165" })); setFormData((prev:any) => ({...prev, medicalIntent: 'chronic_diabetes'})); setScanStep("complete"); toast({ title: "Profile Loaded", description: "Insurance and History retrieved." }) }, 1200) }, 1000) }
-  const addTest = (test: LabTest) => { if (!selectedTests.find(t => t.id === test.id)) { setSelectedTests(prev => [...prev, test]); if (test.requiresConsent) setConsentStatus(prev => ({ ...prev, [test.id]: 'pending' })) }}
+  
+  // Fix 1: Toggle Foreigner Handler
+  const handleToggleForeigner = () => {
+    setIsForeigner(!isForeigner)
+    if (!isForeigner) {
+        setScanStep("idle")
+        setScannedIdentity(null)
+        setFormData((prev: any) => ({...prev, fullName: "", citizenId: ""}))
+    }
+  }
+
+  const addTest = (test: LabTest) => { 
+      if (!selectedTests.find(t => t.id === test.id)) { 
+          setSelectedTests(prev => [...prev, test]); 
+          if (test.requiresConsent) setConsentStatus(prev => ({ ...prev, [test.id]: 'pending' }));
+          setTestSearchQuery(""); // Clear search after adding
+      }
+  }
   const removeTest = (id: string) => { setSelectedTests(prev => prev.filter(t => t.id !== id)); const n = {...consentStatus}; delete n[id]; setConsentStatus(n) }
   const requestConsent = (testId: string) => { setConsentStatus(prev => ({ ...prev, [testId]: 'requesting' })); setTimeout(() => { setConsentStatus(prev => ({ ...prev, [testId]: 'signed' })) }, 2000) }
   const verifyOtp = () => { if(otpInput === "123456") { setInternalAccess('unlocked'); setShowAuthDialog(false); setShowInternalHistoryModal(true) } }
@@ -343,7 +421,7 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmitOrder = async () => {
-    if (!scannedIdentity || selectedTests.length === 0) {
+    if ((!scannedIdentity && !isForeigner) || selectedTests.length === 0) {
       toast({ title: "Missing Information", description: "Please scan patient and select tests", variant: "destructive" })
       return
     }
@@ -352,10 +430,10 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
     try {
       const result = await submitOrder({
         patient: {
-          fullName: scannedIdentity.name || formData.fullName,
-          citizenId: scannedIdentity.citizenId || formData.citizenId,
-          dob: scannedIdentity.dob,
-          age: scannedIdentity.age,
+          fullName: isForeigner ? formData.fullName : (scannedIdentity?.name || formData.fullName),
+          citizenId: isForeigner ? formData.citizenId : (scannedIdentity?.citizenId || formData.citizenId),
+          dob: scannedIdentity?.dob || "01/01/1990",
+          age: scannedIdentity?.age || 30,
           phone: formData.phone,
           address: formData.address,
           medicalIntent: formData.medicalIntent,
@@ -383,19 +461,16 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
           className: "bg-emerald-600 text-white",
         })
         
-        // Refresh patients list to show new patient
         if (refreshPatients) {
           await refreshPatients()
         }
         
-        // Reset form and redirect
         setSelectedTests([])
         setConsentStatus({})
         setScanStep("idle")
         setScannedIdentity(null)
         setFormData({ fullName: "", citizenId: "", medicalIntent: "", phone: "", address: "" })
         
-        // Redirect to my-patients to show new patient
         setTimeout(() => {
           router.push(`/my-patients/${result.patientId}`)
         }, 1500)
@@ -423,18 +498,88 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
         {/* LEFT CONTENT */}
         <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <div className="max-w-5xl mx-auto space-y-6 pb-24">
-                <div className="flex justify-between items-center"><div><h1 className="text-2xl font-bold text-slate-900">Patient Admission</h1><p className="text-slate-500">Reception & Triage • Nurse: <b>Lan Nguyen</b></p></div><Button onClick={() => processIdentityVerification({})} disabled={scanStep !== 'idle' && scanStep !== 'complete'} className={cn("min-w-[160px]", scanStep === 'idle' || scanStep === 'complete' ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800")}>{scanStep !== 'idle' && scanStep !== 'complete' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <QrCode className="mr-2 h-4 w-4"/>}{scanStep === 'idle' || scanStep === 'complete' ? "Scan CCCD" : "Scanning..."}</Button></div>
-                <IdentityVerificationCard data={scannedIdentity || {}} scanStep={scanStep} onClear={() => {setScannedIdentity(null); setScanStep('idle'); setInternalAccess('locked')}} onInternalHistoryClick={() => { internalAccess === 'unlocked' ? setShowInternalHistoryModal(true) : (setShowAuthDialog(true), setOtpStep('method')) }} internalAccess={internalAccess} />
+                <div className="flex justify-between items-center">
+                    <div><h1 className="text-2xl font-bold text-slate-900">Patient Admission</h1><p className="text-slate-500">Reception & Triage • Nurse: <b>Lan Nguyen</b></p></div>
+                    <div className="flex gap-2">
+                        {/* Fix 1: Manual / Foreigner Toggle Button */}
+                        <Button 
+                            variant="outline"
+                            onClick={handleToggleForeigner}
+                            className={cn("gap-2", isForeigner ? "bg-amber-100 text-amber-800 border-amber-300" : "")}
+                        >
+                            <Globe className="h-4 w-4" />
+                            {isForeigner ? "Passport Mode" : "Manual / Foreigner"}
+                        </Button>
+                        <Button onClick={() => processIdentityVerification({})} disabled={isForeigner || (scanStep !== 'idle' && scanStep !== 'complete')} className={cn("min-w-[160px]", scanStep === 'idle' || scanStep === 'complete' ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-800")}>
+                            {scanStep !== 'idle' && scanStep !== 'complete' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <QrCode className="mr-2 h-4 w-4"/>}
+                            {scanStep === 'idle' || scanStep === 'complete' ? "Scan CCCD" : "Scanning..."}
+                        </Button>
+                    </div>
+                </div>
+                
+                <IdentityVerificationCard data={scannedIdentity || {}} scanStep={scanStep} onClear={() => {setScannedIdentity(null); setScanStep('idle'); setInternalAccess('locked')}} onInternalHistoryClick={() => { internalAccess === 'unlocked' ? setShowInternalHistoryModal(true) : (setShowAuthDialog(true), setOtpStep('method')) }} internalAccess={internalAccess} isForeigner={isForeigner} />
                 <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Demographics</CardTitle></CardHeader><CardContent className="grid grid-cols-2 gap-4"><div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div><div><Label className="text-xs text-slate-500">Citizen ID</Label><div className="flex gap-2"><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/><Button onClick={() => processIdentityVerification({})} disabled={scanStep !== 'idle'} variant="secondary">Check</Button></div></div></CardContent></Card>
+                    <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Demographics</CardTitle></CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-xs text-slate-500">Full Name</Label>
+                                {/* Fix 1: Editable if Foreigner */}
+                                <Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} disabled={!isForeigner && scanStep === 'complete'} className="font-bold uppercase"/>
+                            </div>
+                            <div>
+                                <Label className="text-xs text-slate-500">{isForeigner ? "Passport / ID No." : "Citizen ID"}</Label>
+                                <div className="flex gap-2">
+                                    <Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} disabled={!isForeigner && scanStep === 'complete'} className="font-mono"/>
+                                    <Button onClick={() => processIdentityVerification({})} disabled={isForeigner || scanStep !== 'idle'} variant="secondary">Check</Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <div className="md:col-span-2"><RelatedPartiesCard /></div>
+                    
                     <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4"/> Clinical Context</CardTitle></CardHeader><CardContent className="space-y-4"><div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100"><Label className="text-sm font-bold text-emerald-800 mb-2 block flex items-center gap-2"><Activity className="h-4 w-4"/> Medical Intent</Label><Select value={formData.medicalIntent} onValueChange={(val) => setFormData({...formData, medicalIntent: val})}><SelectTrigger className="bg-white border-emerald-200"><SelectValue placeholder="Select intent..." /></SelectTrigger><SelectContent>{medicalIntents.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent></Select></div>{formData.medicalIntent === 'chronic_diabetes' && scannedIdentity?.activeReferral && (<div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r shadow-sm"><div className="flex items-start gap-3"><div className="bg-blue-100 p-2 rounded-full"><Sparkles className="h-5 w-5 text-blue-600" /></div><div><h4 className="font-bold text-blue-900 text-sm mb-1">Suggested Script</h4><p className="text-sm text-blue-800 italic">"Mr./Ms. {formData.fullName.split(' ').pop()}, evidently you have already been classified as a diabetic, and you have no diabetes testing in the last 90 days. We can serve you a diabetes test today which you don't have to make a charge for under BHYT Insurance."</p></div></div></div>)}</CardContent></Card>
+                    
                     <div className="md:col-span-2"><VitalSignsMonitor nurseName="Nurse Lan" patientAge={scannedIdentity?.age} historicalHeight={scannedIdentity?.historicalHeight} /></div>
                     <div className="md:col-span-2"><VisualObservationCard medicalIntent={formData.medicalIntent} /></div>
-                    <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader><CardContent className="space-y-4">{suggestedTests.length > 0 && (<div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4"><h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4"/> Recommended Protocol</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-2">{suggestedTests.map(test => { const eligible = checkInsuranceEligibility(test, scannedIdentity); return (<button key={test.id} onClick={() => addTest(test)} className="text-left p-2 rounded border bg-white border-indigo-200 hover:border-indigo-400 flex justify-between items-center group"><div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div><PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/></button>)})}</div></div>)}<div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-10 h-10" placeholder="Search tests..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)}/></div></CardContent></Card>
                     
-                    {/* --- TELEHEALTH DISPATCHER (Updated) --- */}
+                    <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            {suggestedTests.length > 0 && (<div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4"><h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4"/> Recommended Protocol</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-2">{suggestedTests.map(test => { const eligible = checkInsuranceEligibility(test, scannedIdentity); return (<button key={test.id} onClick={() => addTest(test)} className="text-left p-2 rounded border bg-white border-indigo-200 hover:border-indigo-400 flex justify-between items-center group"><div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div><PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/></button>)})}</div></div>)}
+                            <div className="relative">
+                                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                <Input className="pl-10 h-10" placeholder="Search tests..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)}/>
+                            </div>
+                            
+                            {/* Fix 4: Display Search Results */}
+                            {testSearchQuery && (
+                                <div className="border rounded-md divide-y divide-slate-100 max-h-60 overflow-y-auto shadow-sm">
+                                    {filteredTests.length > 0 ? filteredTests.map(test => (
+                                        <div key={test.id} className="p-3 bg-white flex justify-between items-center hover:bg-slate-50">
+                                            <div>
+                                                <div className="font-bold text-sm text-slate-800">{test.name}</div>
+                                                <div className="text-xs text-slate-500 italic">{test.description}</div>
+                                                <div className="flex gap-3 mt-1">
+                                                    <Badge variant="outline" className="text-[10px] h-5"><Clock className="h-3 w-3 mr-1"/> {test.turnaroundHours}h</Badge>
+                                                    <span className="text-xs font-bold text-blue-600">{formatCurrency(test.price)}</span>
+                                                </div>
+                                            </div>
+                                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50" onClick={() => addTest(test)}>
+                                                <PlusCircle className="h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                    )) : (
+                                        <div className="p-4 text-center text-sm text-slate-400">No tests found matching "{testSearchQuery}"</div>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                    
                     <div className="md:col-span-2">
                         <TelehealthDispatchCard 
                             medicalIntent={formData.medicalIntent} 

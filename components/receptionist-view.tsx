@@ -465,15 +465,7 @@ export function ReceptionistView() {
                         </CardContent>
                     </Card>
 
-                    {/* VITAL SIGNS MONITOR */}
-                    <div className="md:col-span-2">
-                        <VitalSignsMonitor nurseName="Nurse Lan" patientAge={scannedIdentity?.age} historicalHeight={scannedIdentity?.historicalHeight} />
-                    </div>
 
-                    {/* VISUAL OBSERVATIONS */}
-                    <div className="md:col-span-2">
-                        <VisualObservationCard medicalIntent={formData.medicalIntent} />
-                    </div>
 
                     {/* Lab Search Area */}
                     <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">

@@ -67,6 +67,7 @@ export async function submitOrder(input: SubmitOrderInput) {
           bhyt_card_number: input.insurance.bhytCode,
           bhyt_coverage_level: input.insurance.bhytCoverage ? Math.round(input.insurance.bhytCoverage * 100) : 80,
           medical_notes: input.patient.medicalIntent ? `Medical Intent: ${input.patient.medicalIntent}` : null,
+          is_active: true,
         })
         .select("id")
         .single()

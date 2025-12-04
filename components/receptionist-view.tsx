@@ -82,6 +82,59 @@ const doctorPool: Doctor[] = [
     { id: "dr6", name: "Dr. Sarah Smith", specialty: "OBGYN / Fertility", status: "online", queueLength: 1, avatarColor: "bg-pink-100 text-pink-700" },
 ]
 
+
+
+const medicalIntents = [
+    { 
+        id: "general_checkup", 
+        label: "General Health Checkup", 
+        recommended: ["cbc", "lipid", "hba1c"], 
+        visualPrompts: [] 
+    },
+    { 
+        id: "chronic_diabetes", 
+        label: "Diabetes Monitoring", 
+        recommended: ["hba1c", "lipid"], 
+        visualPrompts: [
+            { id: "foot_exam", label: "Foot/Ulcer Exam", icon: "foot", availableTags: ["Normal", "Ulcer", "Swelling", "Redness", "Callus", "Gangrene"] }, 
+            { id: "injection_site", label: "Injection Sites", icon: "skin", availableTags: ["Normal", "Bruising", "Lipohypertrophy", "Infection", "Scarring"] }
+        ] 
+    },
+    { 
+        id: "fever_infection", 
+        label: "Fever & Infection", 
+        recommended: ["cbc", "dengue"], 
+        visualPrompts: [
+            { id: "skin_rash", label: "Skin Rash / Petechiae", icon: "skin", availableTags: ["None", "Petechiae", "Maculopapular", "Hives", "Blisters", "Diffused Redness"] }, 
+            { id: "eye_exam", label: "Bloodshot Eyes / Sclera", icon: "eye", availableTags: ["Normal", "Red/Bloodshot", "Jaundice (Yellow)", "Discharge", "Pale"] }, 
+            { id: "throat", label: "Throat / Tonsils", icon: "mouth", availableTags: ["Normal", "Inflamed", "White Spots (Pus)", "Swollen Tonsils", "Bleeding"] }
+        ] 
+    },
+    { 
+        id: "std_screening", 
+        label: "STD / Sexual Health", 
+        recommended: ["hiv", "syphilis"], 
+        visualPrompts: [
+            { id: "lesion", label: "Visible Lesions", icon: "skin", availableTags: ["None", "Ulcer", "Wart-like", "Blister", "Discharge", "Rash"] }
+        ] 
+    },
+    { 
+        id: "fertility", 
+        label: "Fertility / IVF Support", 
+        recommended: ["amh", "fsh", "cbc"], 
+        visualPrompts: [] 
+    },
+    { 
+        id: "prenatal", 
+        label: "Prenatal Care (1st Trim)", 
+        recommended: ["cbc", "beta_hcg", "hiv", "syphilis"], 
+        visualPrompts: [] 
+    },
+]
+
+
+
+
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
 // --- IDENTITY CARD (Unchanged) ---
@@ -144,16 +197,112 @@ function RelatedPartiesCard() {
 }
 
 // --- VISUAL OBSERVATION (Unchanged) ---
+
+
 function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
     const { toast } = useToast()
-    const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
+    // Changed state structure: 'note' string -> 'tags' string array
+    const [capturedImages, setCapturedImages] = useState<Record<string, { tags: string[], captured: boolean }>>({})
+    
     const intentData = medicalIntents.find(i => i.id === medicalIntent)
     const prompts = intentData?.visualPrompts || []
+    
     if (!medicalIntent || prompts.length === 0) return null
-    const handleCapture = (promptId: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } })); toast({ title: "Image Captured", description: "Visual record added to session." }) }
-    const handleNote = (promptId: string, text: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } })) }
-    return ( <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4"><CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visual Observations</CardTitle><Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Protocol: {intentData?.label}</Badge></div></CardHeader><CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{prompts.map(prompt => { const data = capturedImages[prompt.id]; return (<div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>{data?.captured ? (<div className="space-y-3"><div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group"><ImageIcon className="h-8 w-8 text-white/50" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button></div><div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div></div><div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label><Input value={data.note} onChange={e => handleNote(prompt.id, e.target.value)} className="h-8 text-xs bg-slate-50" placeholder={`Describe ${prompt.label.toLowerCase()}...`} /></div></div>) : (<button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group"><div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">{prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}</div><div><div className="text-sm font-bold text-slate-700">{prompt.label}</div><div className="text-[10px] text-slate-400 flex items-center justify-center gap-1"><AlertTriangle className="h-3 w-3"/> Required for Protocol</div></div></button>)}</div>) })}</CardContent></Card> )
+
+    const handleCapture = (promptId: string) => { 
+        // Initialize with empty tags array
+        setCapturedImages(prev => ({ ...prev, [promptId]: { tags: [], captured: true } })); 
+        toast({ title: "Image Captured", description: "Select tags to classify the image." }) 
+    }
+
+    const toggleTag = (promptId: string, tag: string) => {
+        setCapturedImages(prev => {
+            const currentTags = prev[promptId]?.tags || []
+            const newTags = currentTags.includes(tag) 
+                ? currentTags.filter(t => t !== tag) // Remove if exists
+                : [...currentTags, tag] // Add if not exists
+            
+            return { ...prev, [promptId]: { ...prev[promptId], tags: newTags } }
+        })
+    }
+
+    return ( 
+        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2">
+                        <Camera className="h-4 w-4"/> Visual Observations
+                    </CardTitle>
+                    <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
+                        Protocol: {intentData?.label}
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {prompts.map(prompt => { 
+                    const data = capturedImages[prompt.id]; 
+                    // Fallback tags if none defined in data
+                    const tagsToDisplay = prompt.availableTags || ["Normal", "Abnormal", "Inconclusive"];
+                    
+                    return (
+                        <div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>
+                            {data?.captured ? (
+                                <div className="space-y-3">
+                                    <div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group">
+                                        <ImageIcon className="h-8 w-8 text-white/50" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button>
+                                        </div>
+                                        <div className="absolute top-2 left-2">
+                                            <Badge className="bg-emerald-600 text-[10px]">Captured</Badge>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase font-bold text-slate-500">Quick Classification</Label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {tagsToDisplay.map(tag => {
+                                                const isSelected = data.tags.includes(tag);
+                                                return (
+                                                    <button 
+                                                        key={tag}
+                                                        onClick={() => toggleTag(prompt.id, tag)}
+                                                        className={cn(
+                                                            "text-[10px] px-2 py-1 rounded-full border font-semibold transition-all",
+                                                            isSelected 
+                                                                ? "bg-purple-600 text-white border-purple-600 shadow-sm" 
+                                                                : "bg-slate-50 text-slate-600 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                                                        )}
+                                                    >
+                                                        {tag}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                        {data.tags.length === 0 && <div className="text-[10px] text-amber-600 italic mt-1">* Please select at least one tag</div>}
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group">
+                                    <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">
+                                        {prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-slate-700">{prompt.label}</div>
+                                        <div className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
+                                            <AlertTriangle className="h-3 w-3"/> Required for Protocol
+                                        </div>
+                                    </div>
+                                </button>
+                            )}
+                        </div>
+                    ) 
+                })}
+            </CardContent>
+        </Card> 
+    )
 }
+
 
 // --- PRIVATE INSURANCE (Unchanged) ---
 interface PrivateInsuranceData { provider: string; policyNumber: string; frontImg: string | null; backImg: string | null; estimatedCoverage: number; isActive: boolean }

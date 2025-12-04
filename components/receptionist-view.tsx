@@ -32,6 +32,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // --- TYPES ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
+
+
+
+
+
+
 interface VisualPrompt {
     id: string;
     label: string;
@@ -57,6 +63,77 @@ interface PrivateInsuranceData {
 }
 
 // --- MOCK DATA ---
+
+
+
+
+
+
+
+
+
+
+
+// --- PASTE THIS INSIDE ReceptionistView ---
+
+  // 1. UPDATE STATE (Removed admissionType, added phonePrefix)
+  const [scanStep, setScanStep] = useState<"idle" | "cccd" | "checking-bhyt" | "complete">("idle")
+  const [scannedIdentity, setScannedIdentity] = useState<any>(null)
+  
+  const [formData, setFormData] = useState({ 
+      fullName: "", dob: "", gender: "", citizenId: "", 
+      phonePrefix: "+84", phone: "", email: "", address: "", // Added phonePrefix
+      selectedIntents: [] as string[]
+  })
+
+  // 2. UPDATE HANDLERS (Scan & Manual BHYT Check)
+  const simulateBHYTFetch = (name: string, cid: string) => {
+      setScanStep("checking-bhyt");
+      toast({ title: "Checking Insurance...", description: `Verifying BHYT for ${name}` });
+      
+      setTimeout(() => {
+          // Mock Logic: If CID starts with "079", found. Else, not found.
+          const found = cid.startsWith("079"); 
+          
+          if (found) {
+              setScannedIdentity((prev:any) => ({ 
+                  ...prev, 
+                  bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" } 
+              }));
+              toast({ title: "Insurance Verified", description: "BHYT data retrieved successfully.", className: "bg-emerald-600 text-white" });
+          } else {
+               toast({ title: "No Insurance Found", description: "Could not find BHYT records for this ID.", variant: "destructive" });
+          }
+          setScanStep("complete");
+      }, 1500);
+  }
+
+  const handleScanComplete = () => {
+      setScanStep("cccd");
+      setTimeout(() => {
+          const extracted = { name: "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", gender: "female", citizenId: "079192000123", address: "123 Nguyen Hue, D1" };
+          setScannedIdentity(extracted);
+          setFormData(prev => ({ ...prev, fullName: extracted.name, dob: extracted.dob, gender: extracted.gender, citizenId: extracted.citizenId, address: extracted.address }));
+          
+          // Auto-trigger BHYT check after scan
+          simulateBHYTFetch(extracted.name, extracted.citizenId);
+      }, 1000);
+  }
+
+  const handleManualBHYTCheck = () => {
+      if(!formData.fullName || !formData.citizenId) {
+          toast({ title: "Missing Info", description: "Please enter Name and ID to check insurance.", variant: "destructive" });
+          return;
+      }
+      simulateBHYTFetch(formData.fullName, formData.citizenId);
+  }
+
+
+
+
+
+
+
 const labTestsData: LabTest[] = [
   { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies" }, 
   { id: "cbc", name: "Complete Blood Count", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, popular: true, description: "Overall health, anemia, infection" },
@@ -130,120 +207,84 @@ const doctorPool: Doctor[] = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-// --- COMPONENT: IDENTITY VERIFICATION (DUAL FLOW) ---
+// --- COMPONENT: IDENTITY VERIFICATION (UNIFIED FLOW) ---
 function IdentityVerificationCard({ 
-    admissionType, 
-    setAdmissionType, 
     onScanComplete, 
     scanStep, 
     bhytData,
     onInternalHistoryClick,
     internalAccess
 }: any) {
-    const isCitizen = admissionType === 'citizen';
     return (
         <Card className="border-t-4 border-t-blue-600 shadow-sm mb-6">
             <CardHeader className="pb-3 border-b border-slate-100">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2">
-                        <User className="h-4 w-4"/> Patient Identification
-                    </CardTitle>
-                    <Tabs value={admissionType} onValueChange={setAdmissionType} className="w-[300px]">
-                        <TabsList className="grid w-full grid-cols-2 h-8">
-                            <TabsTrigger value="citizen" className="text-xs">Citizen (CCCD)</TabsTrigger>
-                            <TabsTrigger value="foreigner" className="text-xs">Foreigner / Manual</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
+                <CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2">
+                    <User className="h-4 w-4"/> Patient Identification & Insurance
+                </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-                {isCitizen ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-slate-100">
-                        <div className="p-6 flex flex-col items-center justify-center space-y-4 text-center">
-                            {scanStep === 'idle' ? (
-                                <>
-                                    <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center mb-2">
-                                        <QrCode className="h-8 w-8 text-blue-600" />
-                                    </div>
-                                    <Button onClick={onScanComplete} className="bg-blue-600 hover:bg-blue-700 w-full max-w-xs">
-                                        <ScanLine className="mr-2 h-4 w-4"/> Scan CCCD Chip
-                                    </Button>
-                                    <p className="text-xs text-slate-400">Place card on reader to auto-fill demographics & BHYT</p>
-                                </>
-                            ) : (
-                                <div className="space-y-2">
-                                    <div className="inline-flex items-center gap-2 text-emerald-600 font-bold bg-emerald-50 px-4 py-2 rounded-full text-sm">
-                                        <CheckCircle2 className="h-5 w-5"/> Identity Verified
-                                    </div>
-                                    <p className="text-xs text-slate-500">Data extracted successfully.</p>
-                                    <Button variant="ghost" size="sm" onClick={onScanComplete}>Rescan</Button>
-                                </div>
-                            )}
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-slate-100">
+                    {/* LEFT: SCAN ACTION */}
+                    <div className="p-6 flex flex-col items-center justify-center space-y-4 text-center">
+                        <div className="h-14 w-14 bg-blue-50 rounded-full flex items-center justify-center mb-1">
+                            {scanStep === 'idle' ? <QrCode className="h-7 w-7 text-blue-600" /> : <CheckCircle2 className="h-7 w-7 text-emerald-600"/>}
                         </div>
-                        <div className="p-5 bg-slate-50/50">
-                            <div className="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-wider mb-4">
+                        {scanStep === 'idle' ? (
+                            <>
+                                <Button onClick={onScanComplete} className="bg-blue-600 hover:bg-blue-700 w-full max-w-xs shadow-md">
+                                    <ScanLine className="mr-2 h-4 w-4"/> Scan CCCD Chip
+                                </Button>
+                                <p className="text-xs text-slate-400 max-w-[200px]">Place card on reader to auto-fill demographics & insurance.</p>
+                            </>
+                        ) : (
+                            <div className="space-y-2">
+                                <div className="text-sm font-bold text-slate-700">Chip Data Extracted</div>
+                                <Button variant="outline" size="sm" onClick={onScanComplete} className="text-xs h-7">Rescan Card</Button>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* RIGHT: BHYT STATUS */}
+                    <div className="p-5 bg-slate-50/50 flex flex-col justify-center">
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-blue-500 uppercase tracking-wider">
                                 <ShieldCheck className="h-4 w-4" /> Insurance (BHYT)
                             </div>
-                            {scanStep === 'idle' ? (
-                                <div className="h-24 flex items-center justify-center text-slate-400 text-sm italic border-2 border-dashed rounded-lg">
-                                    Waiting for ID Scan...
+                            {scanStep === 'checking-bhyt' && <Loader2 className="h-3 w-3 animate-spin text-blue-500"/>}
+                        </div>
+
+                        {bhytData ? (
+                            <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
+                                <div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Card Number</div>
+                                    <div className="font-bold text-xl text-blue-600 font-mono tracking-tight">{bhytData.code}</div>
                                 </div>
-                            ) : bhytData ? (
-                                <div className="space-y-3 animate-in fade-in">
+                                <div className="grid grid-cols-2 gap-2 bg-white border border-blue-100 p-2 rounded shadow-sm">
                                     <div>
-                                        <div className="text-xs text-slate-400 font-bold mb-1">Card Number</div>
-                                        <div className="font-bold text-xl text-blue-600 font-mono tracking-tight">{bhytData.code}</div>
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Benefit</div>
+                                        <div className="text-sm font-bold text-slate-800">{bhytData.coverageLabel}</div>
                                     </div>
-                                    <div className="flex justify-between items-center bg-blue-50 border border-blue-100 p-2 rounded">
-                                        <div>
-                                            <div className="text-[10px] text-blue-600 font-bold uppercase">Benefit Level</div>
-                                            <div className="text-sm font-bold text-slate-800">{bhytData.coverageLabel}</div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-[10px] text-blue-600 font-bold uppercase">Expiry</div>
-                                            <div className="text-sm font-bold text-slate-800">{bhytData.expiry}</div>
-                                        </div>
-                                    </div>
-                                    <div className="pt-2 border-t border-slate-200">
-                                        {internalAccess === 'locked' ? (
-                                            <Button onClick={onInternalHistoryClick} variant="outline" size="sm" className="w-full h-7 text-xs border-amber-300 bg-amber-50 text-amber-800 border-dashed">
-                                                <Lock className="h-3 w-3 mr-2" /> Unlock History
-                                            </Button>
-                                        ) : (
-                                            <div className="text-center text-xs text-emerald-600 font-bold flex items-center justify-center gap-1">
-                                                <History className="h-3 w-3"/> History Unlocked
-                                            </div>
-                                        )}
+                                    <div className="text-right">
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase">Expiry</div>
+                                        <div className="text-sm font-bold text-slate-800">{bhytData.expiry}</div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="text-amber-600 text-sm font-bold flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4"/> No BHYT Found
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="p-6 bg-slate-50/30">
-                        <div className="flex items-start gap-4">
-                            <div className="h-12 w-12 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
-                                <Globe className="h-6 w-6 text-amber-600" />
                             </div>
-                            <div>
-                                <h3 className="font-bold text-slate-800">International / Manual Admission</h3>
-                                <p className="text-sm text-slate-500 mb-2">BHYT Insurance is not available for this admission type. Please proceed with manual demographics entry.</p>
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Manual Entry Mode</Badge>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center space-y-2 min-h-[100px] border-2 border-dashed rounded-lg border-slate-200">
+                                <p className="text-xs text-slate-400 italic px-4">
+                                    {scanStep === 'checking-bhyt' ? "Verifying with portal..." : "Scan ID or enter details manually to check insurance."}
+                                </p>
                             </div>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
             </CardContent>
         </Card>
     )
 }
-
-// --- COMPONENT: DEMOGRAPHICS (EXPANDED) ---
-function DemographicsCard({ formData, setFormData, isLocked }: any) {
+// --- COMPONENT: DEMOGRAPHICS (UPDATED) ---
+function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
     return (
         <Card className="border-t-4 border-t-slate-500 shadow-sm h-full">
             <CardHeader className="pb-2">
@@ -256,10 +297,18 @@ function DemographicsCard({ formData, setFormData, isLocked }: any) {
                     <Label className="text-xs text-slate-500">Full Name</Label>
                     <Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase" placeholder="NGUYEN VAN A"/>
                 </div>
+                
+                {/* ID Field with Manual Check Button */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500">ID / Passport</Label>
-                    <Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono" placeholder="079..."/>
+                    <div className="flex gap-2">
+                        <Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono" placeholder="079..."/>
+                        <Button onClick={onCheckBHYT} variant="secondary" className="whitespace-nowrap bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200">
+                            Check BHYT
+                        </Button>
+                    </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-500">DOB</Label>
@@ -273,10 +322,25 @@ function DemographicsCard({ formData, setFormData, isLocked }: any) {
                         </Select>
                     </div>
                 </div>
+
+                {/* Phone with Prefix */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500 flex items-center gap-1"><Phone className="h-3 w-3"/> Phone</Label>
-                    <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="090..."/>
+                    <div className="flex gap-2">
+                        <Select value={formData.phonePrefix} onValueChange={(val) => setFormData({...formData, phonePrefix: val})}>
+                            <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="+84">🇻🇳 +84</SelectItem>
+                                <SelectItem value="+1">🇺🇸 +1</SelectItem>
+                                <SelectItem value="+44">🇬🇧 +44</SelectItem>
+                                <SelectItem value="+81">🇯🇵 +81</SelectItem>
+                                <SelectItem value="+82">🇰🇷 +82</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="909 123 456" className="flex-1"/>
+                    </div>
                 </div>
+
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500 flex items-center gap-1"><Mail className="h-3 w-3"/> Email</Label>
                     <Input value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="abc@email.com"/>
@@ -289,7 +353,6 @@ function DemographicsCard({ formData, setFormData, isLocked }: any) {
         </Card>
     )
 }
-
 // --- COMPONENT: FINANCIAL INFO ---
 function FinancialInfoCard({ data, setData }: any) {
     return (
@@ -627,17 +690,22 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                 <div><h1 className="text-2xl font-bold text-slate-900">Patient Admission</h1></div>
                 
                 {/* 1. Identity (Dual Flow) */}
-                <IdentityVerificationCard 
-                    admissionType={admissionType} setAdmissionType={setAdmissionType}
-                    scanStep={scanStep} onScanComplete={handleScanComplete}
-                    bhytData={scannedIdentity?.bhyt} internalAccess={internalAccess}
-                    onInternalHistoryClick={() => setInternalAccess('unlocked')}
-                />
+<IdentityVerificationCard 
+    scanStep={scanStep} 
+    onScanComplete={handleScanComplete}
+    bhytData={scannedIdentity?.bhyt} 
+    internalAccess={internalAccess}
+    onInternalHistoryClick={() => setInternalAccess('unlocked')}
+/>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 2. Demographics (Expanded) */}
                     <div className="md:col-span-2">
-                        <DemographicsCard formData={formData} setFormData={setFormData} />
+                      <DemographicsCard 
+    formData={formData} 
+    setFormData={setFormData} 
+    onCheckBHYT={handleManualBHYTCheck} // Pass the handler
+/>
                     </div>
 
                     {/* 3. Financial Info */}

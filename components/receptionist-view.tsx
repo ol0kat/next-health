@@ -7,14 +7,15 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   User, QrCode, Search, Loader2, X, CheckCircle2,
   Clock, History, Lock, Unlock, ShieldCheck, 
   ShoppingCart, Copy, FileText, Activity, Save, Beaker, 
-  FileSignature, TabletSmartphone, Wifi, Sparkles, Stethoscope, 
-  PlusCircle, Video, ArrowDown, Edit2, Thermometer, Wind, HeartPulse, Scale
+  FileSignature, Sparkles, Stethoscope, 
+  PlusCircle, Video, Edit2, Thermometer, Wind, HeartPulse, Scale,
+  Camera, Image as ImageIcon, Eye, AlertTriangle, Upload
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,23 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-// --- TYPES & MOCK DATA ---
-interface VitalRecord {
-  id: string
-  timestamp: Date
-  recordedBy: string
-  height: string
-  weight: string
-  bmi: string
-  temp: string
-  bpSys: string
-  bpDia: string
-  pulse: string
-  spo2: string
-  resp: string
-}
-
-// ... (LabTest interface and labTestsData remain the same as previous) ...
+// --- TYPES & DATA MODELS ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
 const labTestsData: LabTest[] = [
@@ -59,17 +44,49 @@ const labTestsData: LabTest[] = [
   { id: "hba1c", name: "Hemoglobin A1c", price: 180000, category: "Biochemistry", sampleType: "Whole Blood", turnaroundHours: 24, popular: true, description: "3-month average blood sugar", linkedCondition: "E11", frequencyDays: 90 },
   { id: "lipid", name: "Lipid Panel", price: 250000, category: "Biochemistry", sampleType: "Serum", turnaroundHours: 24, popular: true, description: "Cholesterol, Triglycerides" },
   { id: "syphilis", name: "Syphilis RPR", price: 150000, category: "Serology", sampleType: "Serum", turnaroundHours: 24, requiresConsent: true, description: "Screening for Syphilis" },
+  { id: "dengue", name: "Dengue NS1", price: 250000, category: "Serology", sampleType: "Serum", turnaroundHours: 2, description: "Acute Dengue Fever" },
 ]
 
+// Updated Intents with Visual Prompts
 const medicalIntents = [
-    { id: "general_checkup", label: "General Health Checkup", recommended: ["cbc", "lipid", "hba1c"] },
-    { id: "chronic_diabetes", label: "Diabetes Monitoring", recommended: ["hba1c", "lipid"] },
-    { id: "std_screening", label: "STD / Sexual Health", recommended: ["hiv", "syphilis"] },
+    { 
+        id: "general_checkup", 
+        label: "General Health Checkup", 
+        recommended: ["cbc", "lipid", "hba1c"],
+        visualPrompts: [] // None mandatory
+    },
+    { 
+        id: "chronic_diabetes", 
+        label: "Diabetes Monitoring", 
+        recommended: ["hba1c", "lipid"],
+        visualPrompts: [
+            { id: "foot_exam", label: "Foot/Ulcer Exam", icon: "foot" }, 
+            { id: "injection_site", label: "Injection Sites", icon: "skin" }
+        ]
+    },
+    { 
+        id: "fever_infection", 
+        label: "Fever & Infection", 
+        recommended: ["cbc", "dengue"],
+        visualPrompts: [
+            { id: "skin_rash", label: "Skin Rash / Petechiae", icon: "skin" },
+            { id: "eye_exam", label: "Bloodshot Eyes / Sclera", icon: "eye" },
+            { id: "throat", label: "Throat / Tonsils", icon: "mouth" }
+        ]
+    },
+    { 
+        id: "std_screening", 
+        label: "STD / Sexual Health", 
+        recommended: ["hiv", "syphilis"],
+        visualPrompts: [
+            { id: "lesion", label: "Visible Lesions", icon: "skin" }
+        ]
+    },
 ]
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-// --- COMPONENT: IDENTITY CARD (Unchanged) ---
+// --- COMPONENT: IDENTITY CARD (Kept same) ---
 function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryClick, internalAccess }: any) {
     if (scanStep === "idle" && !data.bhyt) return null
     const isComplete = scanStep === "complete"
@@ -111,238 +128,132 @@ function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryCl
     )
 }
 
-// --- REWORKED COMPONENT: VITAL SIGNS MONITOR ---
+// --- VITAL SIGNS MONITOR (Cleaned Version) ---
 function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patientAge: number | null, historicalHeight: string, nurseName: string }) {
     const { toast } = useToast()
-    
-    // State for current input
-    const [vitals, setVitals] = useState({
-        height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: ""
-    })
+    const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "" })
     const [isHeightLocked, setIsHeightLocked] = useState(false)
-    
-    // State for History Log
-    const [vitalHistory, setVitalHistory] = useState<VitalRecord[]>([])
+    const [vitalHistory, setVitalHistory] = useState<any[]>([])
 
-    // Effect: Smart Height Logic
     useEffect(() => {
-        if (patientAge && patientAge >= 18 && historicalHeight) {
-            setVitals(prev => ({ ...prev, height: historicalHeight }))
-            setIsHeightLocked(true)
-        } else {
-            setIsHeightLocked(false)
-        }
+        if (patientAge && patientAge >= 18 && historicalHeight) { setVitals(prev => ({ ...prev, height: historicalHeight })); setIsHeightLocked(true) }
+        else { setIsHeightLocked(false) }
     }, [patientAge, historicalHeight])
 
-    // Derived: BMI Calculation
-    const bmi = useMemo(() => {
-        const h = parseFloat(vitals.height) / 100 // convert cm to m
-        const w = parseFloat(vitals.weight)
-        if (h > 0 && w > 0) return (w / (h * h)).toFixed(1)
-        return ""
-    }, [vitals.height, vitals.weight])
-
-    const handleInputChange = (field: string, value: string) => {
-        setVitals(prev => ({ ...prev, [field]: value }))
-    }
-
+    const bmi = useMemo(() => { const h = parseFloat(vitals.height)/100; const w = parseFloat(vitals.weight); return (h>0 && w>0) ? (w/(h*h)).toFixed(1) : "" }, [vitals.height, vitals.weight])
+    const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
+    
     const saveVitals = () => {
-        const hasData = Object.values(vitals).some(val => val !== "")
-        if (!hasData) return
-
-        const newRecord: VitalRecord = {
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: new Date(),
-            recordedBy: nurseName,
-            bmi: bmi,
-            ...vitals
-        }
-
-        setVitalHistory(prev => [newRecord, ...prev])
+        if (!Object.values(vitals).some(val => val !== "")) return
+        setVitalHistory(prev => [{id: Math.random(), timestamp: new Date(), recordedBy: nurseName, bmi: bmi, ...vitals}, ...prev])
         toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` })
-        
-        setVitals(prev => ({ 
-            ...prev, 
-            weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "",
-            height: isHeightLocked ? prev.height : "" 
-        }))
+        setVitals(prev => ({ ...prev, weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "", height: isHeightLocked ? prev.height : "" }))
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault() 
-            saveVitals()
-        }
-    }
-
-    // Helper for input with unit suffix
     const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
-        <div className="relative">
-            <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
-            <div className="relative">
-                <Input 
-                    value={value} 
-                    onChange={e => onChange(e.target.value)} 
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} 
-                />
-                <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
-            </div>
-        </div>
+        <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div>
     )
 
     return (
         <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide">
-                    <Activity className="h-4 w-4"/> Vital Signs
-                </div>
-                <div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">
-                    Press <span className="font-bold text-slate-700">Enter</span> to save
-                </div>
-            </div>
-
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div>
             <CardContent className="p-0">
-                {/* INPUT AREA: CLEAN GRID WITH DIVIDERS */}
-                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={handleKeyDown}>
-                    
-                    {/* SECTION 1: ANTHRO */}
+                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={e => e.key === 'Enter' && saveVitals()}>
                     <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                             <Scale className="h-4 w-4 text-slate-400"/>
-                             <span className="text-xs font-bold text-slate-700 uppercase">Body</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <UnitInput 
-                                label="Height" unit="cm" placeholder="--"
-                                value={vitals.height} 
-                                onChange={(v: string) => handleInputChange('height', v)}
-                                disabled={isHeightLocked}
-                                className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""}
-                            />
-                            <UnitInput 
-                                label="Weight" unit="kg" placeholder="--"
-                                value={vitals.weight} 
-                                onChange={(v: string) => handleInputChange('weight', v)}
-                                className="font-bold text-slate-900"
-                            />
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span>
-                            <span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>
-                                {bmi || "--"}
-                            </span>
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div>
+                        <div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div>
+                        <div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div>
                     </div>
-
-                    {/* SECTION 2: CIRCULATION */}
                     <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                             <HeartPulse className="h-4 w-4 text-slate-400"/>
-                             <span className="text-xs font-bold text-slate-700 uppercase">Circulation</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div>
-                                <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label>
-                                <div className="flex items-center gap-1">
-                                    <Input 
-                                        value={vitals.bpSys} 
-                                        onChange={e => handleInputChange('bpSys', e.target.value)} 
-                                        className="h-9 w-16 text-center font-medium placeholder:text-slate-200" 
-                                        placeholder="120"
-                                    />
-                                    <span className="text-slate-300">/</span>
-                                    <Input 
-                                        value={vitals.bpDia} 
-                                        onChange={e => handleInputChange('bpDia', e.target.value)} 
-                                        className="h-9 w-16 text-center font-medium placeholder:text-slate-200" 
-                                        placeholder="80"
-                                    />
-                                    <span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span>
-                                </div>
-                            </div>
-                            <UnitInput 
-                                label="Pulse Rate" unit="bpm" placeholder="--"
-                                value={vitals.pulse} 
-                                onChange={(v: string) => handleInputChange('pulse', v)}
-                            />
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div>
+                        <div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div>
                     </div>
-
-                    {/* SECTION 3: RESPIRATORY */}
                     <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                             <Wind className="h-4 w-4 text-slate-400"/>
-                             <span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span>
-                        </div>
-                        <div className="space-y-3">
-                            <UnitInput 
-                                label="SpO2" unit="%" placeholder="98"
-                                value={vitals.spo2} 
-                                onChange={(v: string) => handleInputChange('spo2', v)}
-                                className="text-blue-600 font-bold"
-                            />
-                            <UnitInput 
-                                label="Breathing Rate" unit="rpm" placeholder="16"
-                                value={vitals.resp} 
-                                onChange={(v: string) => handleInputChange('resp', v)}
-                            />
-                        </div>
+                        <div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div>
+                        <div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div>
                     </div>
-
-                    {/* SECTION 4: TEMP & ACTION */}
                     <div className="p-5 flex flex-col justify-between bg-slate-50/30">
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Thermometer className="h-4 w-4 text-slate-400"/>
-                                <span className="text-xs font-bold text-slate-700 uppercase">Temp</span>
-                            </div>
-                            <UnitInput 
-                                label="Celcius" unit="°C" placeholder="36.5"
-                                value={vitals.temp} 
-                                onChange={(v: string) => handleInputChange('temp', v)}
-                            />
-                        </div>
-                        <Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">
-                            Record Entry
-                        </Button>
+                        <div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button>
                     </div>
                 </div>
+                {vitalHistory.length > 0 && (<div className="border-t border-slate-100"><Table><TableHeader><TableRow className="hover:bg-transparent border-none"><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead></TableRow></TableHeader><TableBody>{vitalHistory.map((record:any) => (<TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50"><TableCell className="pl-6 py-2"><div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div></TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell><TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell><TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell></TableRow>))}</TableBody></Table></div>)}
+            </CardContent>
+        </Card>
+    )
+}
 
-                {/* LOG HISTORY */}
-                {vitalHistory.length > 0 && (
-                    <div className="border-t border-slate-100">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead>
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead>
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead>
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead>
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead>
-                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {vitalHistory.map(record => (
-                                    <TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50">
-                                        <TableCell className="pl-6 py-2">
-                                            <div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                            <div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div>
-                                        </TableCell>
-                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell>
-                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell>
-                                        <TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell>
-                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell>
-                                        <TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                )}
+// --- NEW COMPONENT: VISUAL OBSERVATIONS ---
+function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
+    const { toast } = useToast()
+    const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
+
+    const intentData = medicalIntents.find(i => i.id === medicalIntent)
+    const prompts = intentData?.visualPrompts || []
+
+    if (!medicalIntent || prompts.length === 0) return null
+
+    const handleCapture = (promptId: string) => {
+        // Simulating a file upload / camera capture
+        setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } }))
+        toast({ title: "Image Captured", description: "Visual record added to session." })
+    }
+
+    const handleNote = (promptId: string, text: string) => {
+        setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } }))
+    }
+
+    return (
+        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2">
+                        <Camera className="h-4 w-4"/> Visual Observations
+                    </CardTitle>
+                    <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
+                        Protocol: {intentData?.label}
+                    </Badge>
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {prompts.map(prompt => {
+                    const data = capturedImages[prompt.id]
+                    return (
+                        <div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>
+                            {data?.captured ? (
+                                <div className="space-y-3">
+                                    <div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group">
+                                        <ImageIcon className="h-8 w-8 text-white/50" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button>
+                                        </div>
+                                        <div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label>
+                                        <Input 
+                                            value={data.note} 
+                                            onChange={e => handleNote(prompt.id, e.target.value)} 
+                                            className="h-8 text-xs bg-slate-50" 
+                                            placeholder={`Describe ${prompt.label.toLowerCase()}...`}
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group">
+                                    <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">
+                                        {prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-slate-700">{prompt.label}</div>
+                                        <div className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
+                                            <AlertTriangle className="h-3 w-3"/> Required for Protocol
+                                        </div>
+                                    </div>
+                                </button>
+                            )}
+                        </div>
+                    )
+                })}
             </CardContent>
         </Card>
     )
@@ -356,20 +267,15 @@ export function ReceptionistView() {
   const [scanStep, setScanStep] = useState<any>("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
   const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male", medicalIntent: "" })
-  
-  // Cart & Logic
   const [selectedTests, setSelectedTests] = useState<LabTest[]>([])
   const [testSearchQuery, setTestSearchQuery] = useState("")
   const [consentStatus, setConsentStatus] = useState<Record<string, 'pending' | 'requesting' | 'signed'>>({})
   const [internalAccess, setInternalAccess] = useState<'locked' | 'unlocked'>('locked')
-  
-  // Modals
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [showInternalHistoryModal, setShowInternalHistoryModal] = useState(false)
   const [otpStep, setOtpStep] = useState<'method' | 'verify'>('method')
   const [otpInput, setOtpInput] = useState("")
 
-  // --- ENGINE: INSURANCE ---
   const checkInsuranceEligibility = (test: LabTest, patient: any) => {
       if(!patient || !patient.bhyt) return { isCovered: false, reason: "No Insurance" }
       if (test.linkedCondition && patient.chronicConditionCode === test.linkedCondition) {
@@ -395,25 +301,15 @@ export function ReceptionistView() {
       return { subtotal, insuranceCoverage, patientDue }
   }, [selectedTests, scannedIdentity])
 
-  // --- PROCESS SCAN ---
   const processIdentityVerification = (sourceData: any) => {
       setScanStep("cccd")
       setTimeout(() => {
-          const verifiedData = { 
-              name: sourceData.name || formData.fullName || "TRẦN THỊ NGỌC LAN", 
-              dob: "15/05/1992", age: 33, 
-              citizenId: sourceData.citizenId || formData.citizenId || "079192000123"
-          }
+          const verifiedData = { name: sourceData.name || formData.fullName || "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", age: 33, citizenId: sourceData.citizenId || formData.citizenId || "079192000123" }
           setScannedIdentity(verifiedData)
           setFormData((prev: any) => ({...prev, fullName: verifiedData.name, citizenId: verifiedData.citizenId}))
           setScanStep("checking-bhyt")
           setTimeout(() => {
-              setScannedIdentity((prev:any) => ({
-                  ...prev, 
-                  bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" },
-                  chronicCondition: "Type 2 Diabetes", chronicConditionCode: "E11", activeReferral: "TD-2401-99",
-                  historicalHeight: "165" // Mocking historical height from backend
-              }))
+              setScannedIdentity((prev:any) => ({ ...prev, bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" }, chronicCondition: "Type 2 Diabetes", chronicConditionCode: "E11", activeReferral: "TD-2401-99", historicalHeight: "165" }))
               setFormData((prev:any) => ({...prev, medicalIntent: 'chronic_diabetes'}))
               setScanStep("complete")
               toast({ title: "Profile Loaded", description: "Insurance and History retrieved." })
@@ -449,7 +345,6 @@ export function ReceptionistView() {
                     </Button>
                 </div>
 
-                {/* Identity Card */}
                 <IdentityVerificationCard 
                     data={scannedIdentity || {}} scanStep={scanStep} 
                     onClear={() => {setScannedIdentity(null); setScanStep('idle'); setInternalAccess('locked')}}
@@ -458,7 +353,7 @@ export function ReceptionistView() {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Clinical Intake */}
+                    {/* Clinical Intake & Intent */}
                     <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4"/> Clinical Context</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
@@ -469,29 +364,22 @@ export function ReceptionistView() {
                                     <SelectContent>{medicalIntents.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
-                            
-                            {/* --- NURSE SCRIPT --- */}
                             {formData.medicalIntent === 'chronic_diabetes' && scannedIdentity?.activeReferral && (
                                 <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r shadow-sm">
-                                    <div className="flex items-start gap-3">
-                                        <div className="bg-blue-100 p-2 rounded-full"><Sparkles className="h-5 w-5 text-blue-600" /></div>
-                                        <div>
-                                            <h4 className="font-bold text-blue-900 text-sm mb-1">Suggested Script</h4>
-                                            <p className="text-sm text-blue-800 italic">"Mr./Ms. {formData.fullName.split(' ').pop()}, evidently you have already been classified as a diabetic, and you have no diabetes testing in the last 90 days. We can serve you a diabetes test today which you don't have to make a charge for under BHYT Insurance."</p>
-                                        </div>
-                                    </div>
+                                    <div className="flex items-start gap-3"><div className="bg-blue-100 p-2 rounded-full"><Sparkles className="h-5 w-5 text-blue-600" /></div><div><h4 className="font-bold text-blue-900 text-sm mb-1">Suggested Script</h4><p className="text-sm text-blue-800 italic">"Mr./Ms. {formData.fullName.split(' ').pop()}, evidently you have already been classified as a diabetic, and you have no diabetes testing in the last 90 days. We can serve you a diabetes test today which you don't have to make a charge for under BHYT Insurance."</p></div></div>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
 
-                    {/* --- REPLACED: NEW VITAL SIGNS MONITOR --- */}
+                    {/* VITAL SIGNS MONITOR (Cleaned) */}
                     <div className="md:col-span-2">
-                        <VitalSignsMonitor 
-                            nurseName="Nurse Lan"
-                            patientAge={scannedIdentity?.age}
-                            historicalHeight={scannedIdentity?.historicalHeight}
-                        />
+                        <VitalSignsMonitor nurseName="Nurse Lan" patientAge={scannedIdentity?.age} historicalHeight={scannedIdentity?.historicalHeight} />
+                    </div>
+
+                    {/* --- NEW: VISUAL OBSERVATIONS (INSERTED HERE) --- */}
+                    <div className="md:col-span-2">
+                        <VisualObservationCard medicalIntent={formData.medicalIntent} />
                     </div>
 
                     {/* Lab Search Area */}
@@ -506,8 +394,7 @@ export function ReceptionistView() {
                                             const eligible = checkInsuranceEligibility(test, scannedIdentity)
                                             return (
                                                 <button key={test.id} onClick={() => addTest(test)} className="text-left p-2 rounded border bg-white border-indigo-200 hover:border-indigo-400 flex justify-between items-center group">
-                                                    <div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div>
-                                                    <PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/>
+                                                    <div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div><PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/>
                                                 </button>
                                             )
                                         })}
@@ -532,10 +419,7 @@ export function ReceptionistView() {
                         return (
                             <div key={test.id} className={cn("border rounded-lg p-3 relative", test.requiresConsent && consentStatus[test.id] !== 'signed' ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white")}>
                                 <div className="flex justify-between items-start mb-1"><h4 className="font-bold text-sm text-slate-800 pr-6">{test.name}</h4><button onClick={() => removeTest(test.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="h-4 w-4"/></button></div>
-                                <div className="flex justify-between items-end mt-2">
-                                    <div className="text-xs text-slate-500 max-w-[60%]">{isFullyCovered && <div className="text-emerald-600 font-bold">BHYT Full Coverage</div>}{eligibility.reason}</div>
-                                    <div className="text-right">{isFullyCovered ? (<><div className="text-[10px] text-slate-400 line-through">{formatCurrency(test.price)}</div><div className="font-bold text-emerald-600 text-sm">0 ₫</div></>) : (<div className="font-bold text-slate-800 text-sm">{formatCurrency(test.price)}</div>)}</div>
-                                </div>
+                                <div className="flex justify-between items-end mt-2"><div className="text-xs text-slate-500 max-w-[60%]">{isFullyCovered && <div className="text-emerald-600 font-bold">BHYT Full Coverage</div>}{eligibility.reason}</div><div className="text-right">{isFullyCovered ? (<><div className="text-[10px] text-slate-400 line-through">{formatCurrency(test.price)}</div><div className="font-bold text-emerald-600 text-sm">0 ₫</div></>) : (<div className="font-bold text-slate-800 text-sm">{formatCurrency(test.price)}</div>)}</div></div>
                                 {test.requiresConsent && (<div className="mt-3 pt-3 border-t border-amber-200/50">{consentStatus[test.id] !== 'signed' ? <Button size="sm" variant="outline" onClick={() => requestConsent(test.id)} className="w-full h-8 text-xs">Request Signature</Button> : <div className="text-xs text-emerald-600 font-bold flex items-center gap-1"><FileSignature className="h-3 w-3"/> Signed</div>}</div>)}
                             </div>
                         )

@@ -309,14 +309,113 @@ function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalInt
 }
 
 // --- PRIVATE INSURANCE (Unchanged) ---
-interface PrivateInsuranceData { provider: string; policyNumber: string; frontImg: string | null; backImg: string | null; estimatedCoverage: number; isActive: boolean }
+interface PrivateInsuranceData { 
+    provider: string; 
+    policyNumber: string; 
+    expiryDate: string; // Added field
+    frontImg: string | null; 
+    backImg: string | null; 
+    estimatedCoverage: number; 
+    isActive: boolean 
+}
+
 function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuranceData) => void, data: PrivateInsuranceData }) {
     const { toast } = useToast()
     const [isScanning, setIsScanning] = useState(false)
     const providers = [{ id: "pvi", name: "PVI Insurance", color: "bg-yellow-600" }, { id: "baoviet", name: "Bao Viet Insurance", color: "bg-blue-600" }, { id: "manulife", name: "Manulife", color: "bg-emerald-600" }, { id: "liberty", name: "Liberty Insurance", color: "bg-indigo-600" }]
-    const handleScanCard = () => { setIsScanning(true); setTimeout(() => { setIsScanning(false); onChange({ ...data, isActive: true, provider: "baoviet", policyNumber: "BV-88992200-X", frontImg: "captured", backImg: "captured", estimatedCoverage: 0.8 }); toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) }, 2000) }
+    
+    const handleScanCard = () => { 
+        setIsScanning(true); 
+        setTimeout(() => { 
+            setIsScanning(false); 
+            onChange({ 
+                ...data, 
+                isActive: true, 
+                provider: "baoviet", 
+                policyNumber: "BV-88992200-X", 
+                expiryDate: "2025-12-31", // Mock expiry from OCR
+                frontImg: "captured", 
+                backImg: "captured", 
+                estimatedCoverage: 0.8 
+            }); 
+            toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) 
+        }, 2000) 
+    }
+    
     const toggleActive = () => { if (!data.isActive) { onChange({ ...data, isActive: true }) } else { onChange({ ...data, isActive: false }) } }
-    return ( <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}><CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between"><CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}><Shield className="h-4 w-4"/> Private Insurance (Optional)</CardTitle><div className="flex items-center gap-2">{data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>} <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-8 text-xs" onClick={toggleActive}>{data.isActive ? "Remove" : "Add Insurance"}</Button></div></CardHeader>{data.isActive && (<CardContent className="p-5 animate-in slide-in-from-top-2"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-4"><Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label><div className="grid grid-cols-2 gap-3"><button onClick={handleScanCard} className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span></button><button className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span></button></div>{data.frontImg ? (<div className="text-[10px] text-sky-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center</div>) : (<Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}><ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)</Button>)}</div><div className="space-y-4"><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Provider</Label><Select value={data.provider} onValueChange={(val) => onChange({...data, provider: val})}><SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger><SelectContent>{providers.map(p => (<SelectItem key={p.id} value={p.id}><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", p.color)}></div>{p.name}</div></SelectItem>))}</SelectContent></Select></div><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Policy Number</Label><Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Enter or Scan..." className="font-mono bg-white"/></div><div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100"><div className="flex justify-between items-center mb-2"><Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><RefreshCw className="h-3 w-3"/> Est. Direct Billing</Label><span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span></div><Slider defaultValue={[data.estimatedCoverage]} max={1} step={0.05} onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})} className="py-2"/><div className="text-[9px] text-slate-400 mt-1 italic">*Estimate only. Final coverage pending TPA approval.</div></div></div></div></CardContent>)}</Card>)
+    
+    return ( 
+        <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}>
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+                <CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}>
+                    <Shield className="h-4 w-4"/> Private Insurance (Optional)
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                    {data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>} 
+                    <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-8 text-xs" onClick={toggleActive}>{data.isActive ? "Remove" : "Add Insurance"}</Button>
+                </div>
+            </CardHeader>
+            
+            {data.isActive && (
+                <CardContent className="p-5 animate-in slide-in-from-top-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={handleScanCard} className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>
+                                    {isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span>
+                                </button>
+                                <button className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>
+                                    {data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span>
+                                </button>
+                            </div>
+                            {data.frontImg ? (<div className="text-[10px] text-sky-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center</div>) : (<Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}><ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)</Button>)}
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-slate-500">Provider</Label>
+                                <Select value={data.provider} onValueChange={(val) => onChange({...data, provider: val})}>
+                                    <SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger>
+                                    <SelectContent>
+                                        {providers.map(p => (<SelectItem key={p.id} value={p.id}><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", p.color)}></div>{p.name}</div></SelectItem>))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            {/* NEW: Grid for Policy Number and Expiry Date */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold text-slate-500">Policy Number</Label>
+                                    <Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Enter or Scan..." className="font-mono bg-white"/>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs font-semibold text-slate-500">Expiry Date</Label>
+                                    <Input 
+                                        type="date" 
+                                        value={data.expiryDate} 
+                                        onChange={(e) => onChange({...data, expiryDate: e.target.value})} 
+                                        className="bg-white font-mono text-sm"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100">
+                                <div className="flex justify-between items-center mb-2">
+                                    <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><RefreshCw className="h-3 w-3"/> Est. Direct Billing</Label>
+                                    <span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
+                                </div>
+                                <Slider defaultValue={[data.estimatedCoverage]} max={1} step={0.05} onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})} className="py-2"/>
+                                <div className="text-[9px] text-slate-400 mt-1 italic">*Estimate only. Final coverage pending TPA approval.</div>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            )}
+        </Card>
+    )
 }
 
 // --- TELEHEALTH DISPATCH CARD (Updated for Multi-Intent) ---
@@ -505,8 +604,16 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   const [showInternalHistoryModal, setShowInternalHistoryModal] = useState(false)
   const [otpStep, setOtpStep] = useState<'method' | 'verify'>('method')
   const [otpInput, setOtpInput] = useState("")
-  const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({ provider: "", policyNumber: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false })
-
+// Inside ReceptionistView
+const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({ 
+    provider: "", 
+    policyNumber: "", 
+    expiryDate: "", // Initialize this new field
+    frontImg: null, 
+    backImg: null, 
+    estimatedCoverage: 0.0, 
+    isActive: false 
+})
   const maxTurnaroundHours = useMemo(() => {
       if (selectedTests.length === 0) return 0
       return Math.max(...selectedTests.map(t => t.turnaroundHours))

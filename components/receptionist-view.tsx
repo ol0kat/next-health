@@ -2,6 +2,8 @@
 
 import type React from "react"
 import { useState, useMemo, useEffect } from "react"
+import { submitOrder } from "@/lib/actions/orders"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -336,6 +338,80 @@ export function ReceptionistView() {
   const verifyOtp = () => { if(otpInput === "123456") { setInternalAccess('unlocked'); setShowAuthDialog(false); setShowInternalHistoryModal(true) } }
   const suggestedTests = useMemo(() => { if (!formData.medicalIntent) return []; const intentObj = medicalIntents.find(i => i.id === formData.medicalIntent); return intentObj ? intentObj.recommended.map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[] : [] }, [formData.medicalIntent])
 
+  // SUBMIT ORDER HANDLER
+  const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmitOrder = async () => {
+    if (!scannedIdentity || selectedTests.length === 0) {
+      toast({ title: "Missing Information", description: "Please scan patient and select tests", variant: "destructive" })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const result = await submitOrder({
+        patient: {
+          fullName: scannedIdentity.name || formData.fullName,
+          citizenId: scannedIdentity.citizenId || formData.citizenId,
+          dob: scannedIdentity.dob,
+          age: scannedIdentity.age,
+          phone: formData.phone,
+          address: formData.address,
+          medicalIntent: formData.medicalIntent,
+        },
+        tests: selectedTests.map(t => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+          turnaroundHours: t.turnaroundHours,
+          requiresConsent: t.requiresConsent,
+        })),
+        insurance: {
+          bhytCode: scannedIdentity?.bhyt?.code,
+          bhytCoverage: scannedIdentity?.bhyt ? 0.8 : 0,
+          privateInsuranceActive: privateInsurance.isActive,
+          estimatedPrivateCoverage: privateInsurance.estimatedCoverage,
+        },
+        costs: cartTotals,
+      })
+
+      if (result.success) {
+        toast({
+          title: result.isNewPatient ? "Patient Created & Order Submitted" : "Order Submitted",
+          description: `Order ID: ${result.orderId}. Patient added to my-patients.`,
+          className: "bg-emerald-600 text-white",
+        })
+        
+        // Reset form and redirect
+        setSelectedTests([])
+        setConsentStatus({})
+        setScanStep("idle")
+        setScannedIdentity(null)
+        setFormData({ fullName: "", citizenId: "", medicalIntent: "", phone: "", address: "" })
+        
+        // Redirect to my-patients to show new patient
+        setTimeout(() => {
+          router.push(`/my-patients/${result.patientId}`)
+        }, 1500)
+      } else {
+        toast({
+          title: "Order Failed",
+          description: result.error || "Could not submit order",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
@@ -389,7 +465,7 @@ export function ReceptionistView() {
                     {privateInsurance.isActive && cartTotals.privateCoverageAmount > 0 && (<div className="flex justify-between text-sm text-sky-600"><span className="flex items-center gap-1"><Shield className="h-3 w-3"/> Private Ins. (~{(privateInsurance.estimatedCoverage*100).toFixed(0)}%)</span><span>- {formatCurrency(cartTotals.privateCoverageAmount)}</span></div>)}
                     <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t"><span>Final Patient Due</span><span>{formatCurrency(cartTotals.finalPatientDue)}</span></div>
                 </div>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12 shadow-lg" disabled={selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed')}><Save className="h-4 w-4 mr-2"/> Submit Order</Button>
+                <Button onClick={handleSubmitOrder} disabled={selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed') || isSubmitting} className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12 shadow-lg">{isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Save className="h-4 w-4 mr-2"/>} {isSubmitting ? "Submitting..." : "Submit Order"}</Button>
             </div>
         </div>
         

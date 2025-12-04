@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   User, QrCode, Search, Loader2, X, CheckCircle2,
@@ -16,7 +16,7 @@ import {
   FileSignature, Sparkles, Stethoscope, 
   PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
   Camera, Image as ImageIcon, Eye, AlertTriangle, 
-  Users, Star, Trash2, Phone, Plus
+  Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -36,12 +36,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-// --- TYPES & DATA MODELS ---
+// --- TYPES ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
-// ... (Existing Lab Data & Intents remain unchanged) ...
+// --- MOCK DATA (Unchanged) ---
 const labTestsData: LabTest[] = [
-  { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies & p24 antigen" }, 
+  { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies" }, 
   { id: "cbc", name: "Complete Blood Count", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, popular: true, description: "Overall health, anemia, infection" },
   { id: "hba1c", name: "Hemoglobin A1c", price: 180000, category: "Biochemistry", sampleType: "Whole Blood", turnaroundHours: 24, popular: true, description: "3-month average blood sugar", linkedCondition: "E11", frequencyDays: 90 },
   { id: "lipid", name: "Lipid Panel", price: 250000, category: "Biochemistry", sampleType: "Serum", turnaroundHours: 24, popular: true, description: "Cholesterol, Triglycerides" },
@@ -100,7 +100,7 @@ function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryCl
     )
 }
 
-// --- VITAL SIGNS MONITOR (Unchanged) ---
+// --- VITAL SIGNS (Unchanged) ---
 function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patientAge: number | null, historicalHeight: string, nurseName: string }) {
     const { toast } = useToast()
     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "" })
@@ -123,7 +123,6 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
     const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
         <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div>
     )
-
     return (
         <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div>
@@ -140,7 +139,7 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
     )
 }
 
-// --- VISUAL OBSERVATION CARD (Unchanged) ---
+// --- VISUAL OBSERVATION (Unchanged) ---
 function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
     const { toast } = useToast()
     const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
@@ -157,136 +156,146 @@ function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
     )
 }
 
-// --- NEW COMPONENT: RELATED PARTIES & EMERGENCY CONTACTS ---
+// --- NEW COMPONENT: RELATED PARTIES & RELATIONSHIP MATRIX ---
 interface RelatedParty {
     id: string
     name: string
     relation: string
     phone: string
-    isPrimary: boolean
+    citizenId?: string // Link key
+    roles: {
+        isEmergency: boolean
+        isGuardian: boolean
+        isPayer: boolean
+    }
 }
 
 function RelatedPartiesCard() {
     const { toast } = useToast()
-    const [contacts, setContacts] = useState<RelatedParty[]>([])
-    const [newContact, setNewContact] = useState({ name: "", relation: "spouse", phone: "" })
+    const [parties, setParties] = useState<RelatedParty[]>([])
+    const [scanRelativeStep, setScanRelativeStep] = useState<"idle" | "scanning">("idle")
 
-    const relations = [
-        { value: "spouse", label: "Spouse / Partner" },
-        { value: "parent", label: "Parent / Guardian" },
-        { value: "sibling", label: "Sibling" },
-        { value: "child", label: "Child" },
-        { value: "friend", label: "Friend" },
-        { value: "other", label: "Other" },
-    ]
+    // Mock Scanning Logic
+    const handleScanRelative = () => {
+        setScanRelativeStep("scanning")
+        setTimeout(() => {
+            setScanRelativeStep("idle")
+            
+            // Simulation: If list is empty, add "Wife". If not, add "Daughter"
+            const isFirst = parties.length === 0
+            const newPerson: RelatedParty = isFirst 
+                ? { 
+                    id: "rel-01", name: "NGUYỄN THỊ MAI (Wife)", relation: "spouse", phone: "0909111222", citizenId: "0791...",
+                    roles: { isEmergency: true, isGuardian: false, isPayer: true } // Wife defaults to Payer/EC
+                  }
+                : {
+                    id: "rel-02", name: "TRẦN MAI ANH (Daughter)", relation: "child", phone: "N/A", citizenId: "0792...",
+                    roles: { isEmergency: false, isGuardian: false, isPayer: false } // Child defaults to nothing
+                  }
 
-    const addContact = () => {
-        if (!newContact.name || !newContact.phone) {
-            toast({ title: "Incomplete", description: "Name and Phone are required.", variant: "destructive" })
-            return
-        }
-
-        const isFirst = contacts.length === 0
-        const newEntry: RelatedParty = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: newContact.name,
-            relation: newContact.relation,
-            phone: newContact.phone,
-            isPrimary: isFirst
-        }
-
-        setContacts([...contacts, newEntry])
-        setNewContact({ name: "", relation: "spouse", phone: "" })
-        toast({ title: "Contact Added", description: isFirst ? "Set as Primary Emergency Contact." : "Added to related parties." })
+            setParties(prev => [...prev, newPerson])
+            toast({ title: "Identity Linked", description: `Added ${newPerson.name} to related parties.` })
+        }, 1500)
     }
 
-    const setPrimary = (id: string) => {
-        setContacts(prev => prev.map(c => ({ ...c, isPrimary: c.id === id })))
+    const toggleRole = (id: string, role: keyof RelatedParty['roles']) => {
+        setParties(prev => prev.map(p => {
+            if (p.id !== id) return p
+            return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } }
+        }))
     }
 
-    const removeContact = (id: string) => {
-        setContacts(prev => prev.filter(c => c.id !== id))
-    }
+    const removeParty = (id: string) => setParties(prev => prev.filter(p => p.id !== id))
 
     return (
-        <Card className="border-t-4 border-t-amber-500 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-50">
+        <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white">
+            <CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2">
-                    <Users className="h-4 w-4"/> Emergency Contacts
+                    <Users className="h-4 w-4"/> Related Parties & Emergency
                 </CardTitle>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="h-8 text-xs gap-2">
+                         <Plus className="h-3 w-3"/> Manual
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        onClick={handleScanRelative} 
+                        disabled={scanRelativeStep === 'scanning'}
+                        className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2"
+                    >
+                         {scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>}
+                         Scan Relative ID
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent className="p-0">
-                
-                {/* 1. INPUT FORM */}
-                <div className="p-5 space-y-4 bg-white">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <Label className="text-xs text-slate-500 font-semibold">Relative Name</Label>
-                            <Input 
-                                value={newContact.name} 
-                                onChange={e => setNewContact({...newContact, name: e.target.value})}
-                                placeholder="Name" 
-                                className="h-10"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs text-slate-500 font-semibold">Relationship</Label>
-                            <Select value={newContact.relation} onValueChange={(val) => setNewContact({...newContact, relation: val})}>
-                                <SelectTrigger className="h-10"><SelectValue placeholder="Select" /></SelectTrigger>
-                                <SelectContent>
-                                    {relations.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="md:col-span-2 space-y-1">
-                            <Label className="text-xs text-slate-500 font-semibold">Phone</Label>
-                            <div className="flex gap-0 rounded-md shadow-sm">
-                                <div className="flex items-center px-3 border border-r-0 rounded-l-md bg-slate-50 text-slate-500 text-sm font-medium whitespace-nowrap min-w-[80px]">
-                                    VN +84
-                                </div>
-                                <Input 
-                                    value={newContact.phone} 
-                                    onChange={e => setNewContact({...newContact, phone: e.target.value})}
-                                    placeholder="Enter phone number" 
-                                    className="rounded-l-none border-l-0 h-10"
-                                />
-                                <Button onClick={addContact} className="ml-2 bg-amber-500 hover:bg-amber-600 text-white h-10">
-                                    <Plus className="h-4 w-4 mr-1"/> Add
-                                </Button>
-                            </div>
-                        </div>
+                {parties.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-sm italic">
+                        No related parties linked yet. Scan a family member's ID to link.
                     </div>
-                </div>
-
-                {/* 2. LIST VIEW */}
-                {contacts.length > 0 && (
-                    <div className="border-t border-slate-100 bg-slate-50/50 p-3 space-y-2">
-                        <Label className="text-[10px] uppercase font-bold text-slate-400 pl-1">Collected Contacts</Label>
-                        {contacts.map(contact => (
-                            <div key={contact.id} className={cn("flex items-center justify-between p-3 rounded-lg border transition-all", contact.isPrimary ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200")}>
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold", contact.isPrimary ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-500")}>
-                                        {contact.name.charAt(0)}
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {parties.map(party => (
+                            <div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors">
+                                {/* Profile Info */}
+                                <div className="flex items-center gap-3 min-w-[200px]">
+                                    <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", 
+                                        party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200"
+                                    )}>
+                                        {party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}
                                     </div>
                                     <div>
                                         <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                            {contact.name}
-                                            {contact.isPrimary && <Badge className="bg-amber-500 text-[9px] h-4 px-1">Primary</Badge>}
+                                            {party.name}
                                         </div>
-                                        <div className="text-xs text-slate-500 flex items-center gap-2">
-                                            <span className="capitalize">{contact.relation}</span> • <span className="font-mono">{contact.phone}</span>
+                                        <div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">
+                                            {party.relation} • {party.phone}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    {!contact.isPrimary && (
-                                        <Button variant="ghost" size="sm" onClick={() => setPrimary(contact.id)} className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600" title="Set as Primary">
-                                            <Star className="h-4 w-4"/>
-                                        </Button>
-                                    )}
-                                    <Button variant="ghost" size="sm" onClick={() => removeContact(contact.id)} className="h-8 w-8 p-0 text-slate-400 hover:text-red-600">
-                                        <Trash2 className="h-4 w-4"/>
-                                    </Button>
+
+                                {/* Role Toggles (The "Chips") */}
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    {/* Emergency Toggle */}
+                                    <button 
+                                        onClick={() => toggleRole(party.id, 'isEmergency')}
+                                        className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
+                                            party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                                        )}
+                                    >
+                                        <Siren className="h-3 w-3"/> Emergency Contact
+                                        {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}
+                                    </button>
+
+                                    {/* Guardian Toggle */}
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <button 
+                                                    onClick={() => toggleRole(party.id, 'isGuardian')}
+                                                    className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
+                                                        party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                                                    )}
+                                                >
+                                                    <FileSignature className="h-3 w-3"/> Legal Guardian
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Authorized to sign consent forms</p></TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+
+                                    {/* Payer Toggle */}
+                                    <button 
+                                        onClick={() => toggleRole(party.id, 'isPayer')}
+                                        className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
+                                            party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                                        )}
+                                    >
+                                        <CreditCard className="h-3 w-3"/> Bill Payer
+                                    </button>
+
+                                    <div className="h-4 w-px bg-slate-200 mx-1"></div>
+                                    <button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button>
                                 </div>
                             </div>
                         ))}
@@ -403,7 +412,7 @@ export function ReceptionistView() {
                         </CardContent>
                     </Card>
 
-                    {/* --- REPLACED: RELATED PARTIES CARD --- */}
+                    {/* --- REPLACED: NEW RELATED PARTIES MATRIX --- */}
                     <div className="md:col-span-2">
                         <RelatedPartiesCard />
                     </div>

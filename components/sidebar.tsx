@@ -22,6 +22,7 @@ import {
   Video,
   ImageIcon,
   Droplet,
+  ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -54,6 +55,7 @@ export function Sidebar({ activeItem, onNavigate, unitSystem = "US", onUnitChang
   const navigation = [
     { name: "Receptionist", icon: User, id: "receptionist" },
     { name: "My Patients", icon: User, id: "patients" },
+    { name: "Orders", icon: ShoppingCart, id: "orders" },
     { name: "My Calendar", icon: Calendar, id: "agenda" },
     { name: "Phlebotomy Room", icon: Droplet, id: "phlebotomy", external: true },
     { name: "Imaging Results", icon: ImageIcon, id: "imaging" },
@@ -68,6 +70,24 @@ export function Sidebar({ activeItem, onNavigate, unitSystem = "US", onUnitChang
     if (item.external && (item.id === "telehealth" || item.id === "phlebotomy")) {
       if (item.id === "telehealth") router.push("/telehealth")
       if (item.id === "phlebotomy") router.push("/phlebotomy-room")
+    } else if (item.id === "orders") {
+      router.push("/orders")
+    } else if (item.id === "receptionist") {
+      router.push("/receptionist")
+    } else if (item.id === "patients") {
+      router.push("/my-patients")
+    } else if (item.id === "agenda") {
+      router.push("/agenda")
+    } else if (item.id === "imaging") {
+      router.push("/imaging")
+    } else if (item.id === "catalog") {
+      router.push("/catalog")
+    } else if (item.id === "finance") {
+      router.push("/finance")
+    } else if (item.id === "chat") {
+      router.push("/messages")
+    } else if (item.id === "settings") {
+      router.push("/settings")
     } else {
       onNavigate(item.id)
     }

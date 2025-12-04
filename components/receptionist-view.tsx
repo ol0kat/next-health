@@ -277,7 +277,7 @@ function TelehealthDispatchCard({ medicalIntent, requiredWaitHours }: { medicalI
 }
 
 // --- MAIN PAGE ---
-export function ReceptionistView() {
+export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => Promise<void> } = {}) {
   const { toast } = useToast()
   const [scanStep, setScanStep] = useState<any>("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
@@ -382,6 +382,11 @@ export function ReceptionistView() {
           description: `Order ID: ${result.orderId}. Patient added to my-patients.`,
           className: "bg-emerald-600 text-white",
         })
+        
+        // Refresh patients list to show new patient
+        if (refreshPatients) {
+          await refreshPatients()
+        }
         
         // Reset form and redirect
         setSelectedTests([])

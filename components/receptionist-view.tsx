@@ -20,8 +20,8 @@ import {
   FileSignature, Sparkles, Stethoscope, 
   PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
   Camera, Image as ImageIcon, Eye, AlertTriangle, 
-  Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
-  Shield, UploadCloud, RefreshCw, Video, CalendarClock, Signal, Zap, FlaskConical,
+  Users, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
+  Shield, RefreshCw, Video, CalendarClock, Zap, FlaskConical,
   Globe, Filter, Mail, MapPin, Wallet, Check
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -44,6 +44,16 @@ interface MedicalIntent {
     label: string;
     recommended: string[];
     visualPrompts: VisualPrompt[];
+}
+
+interface PrivateInsuranceData { 
+    provider: string; 
+    policyNumber: string; 
+    expiryDate: string; 
+    frontImg: string | null; 
+    backImg: string | null; 
+    estimatedCoverage: number; 
+    isActive: boolean 
 }
 
 // --- MOCK DATA ---
@@ -120,30 +130,7 @@ const doctorPool: Doctor[] = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-
-// Calculate suggested tests based on ALL selected intents
-const suggestedTests = useMemo(() => { 
-    if (formData.selectedIntents.length === 0) return []; 
-    
-    // Use Set to avoid duplicate tests if multiple intents recommend the same one (e.g. CBC)
-    const allTestIds = new Set<string>()
-    
-    formData.selectedIntents.forEach((id: string) => {
-        const intentObj = medicalIntents.find(i => i.id === id)
-        if(intentObj) {
-            intentObj.recommended.forEach(tId => allTestIds.add(tId))
-        }
-    })
-
-    // Map IDs back to full Test Objects
-    return Array.from(allTestIds)
-        .map(id => labTestsData.find(t => t.id === id))
-        .filter(Boolean) as LabTest[] 
-}, [formData.selectedIntents])
-
-
-
-// --- 1. IDENTITY CARD (Dual Flow) ---
+// --- COMPONENT: IDENTITY VERIFICATION (DUAL FLOW) ---
 function IdentityVerificationCard({ 
     admissionType, 
     setAdmissionType, 
@@ -255,8 +242,8 @@ function IdentityVerificationCard({
     )
 }
 
-// --- 2. DEMOGRAPHICS CARD (Expanded) ---
-function DemographicsCard({ formData, setFormData }: any) {
+// --- COMPONENT: DEMOGRAPHICS (EXPANDED) ---
+function DemographicsCard({ formData, setFormData, isLocked }: any) {
     return (
         <Card className="border-t-4 border-t-slate-500 shadow-sm h-full">
             <CardHeader className="pb-2">
@@ -303,7 +290,7 @@ function DemographicsCard({ formData, setFormData }: any) {
     )
 }
 
-// --- 3. FINANCIAL CARD (New) ---
+// --- COMPONENT: FINANCIAL INFO ---
 function FinancialInfoCard({ data, setData }: any) {
     return (
         <Card className="border-t-4 border-t-emerald-600 shadow-sm h-full">
@@ -352,57 +339,214 @@ function FinancialInfoCard({ data, setData }: any) {
     )
 }
 
-// --- 4. PRIVATE INSURANCE (Restored with Expiry) ---
-interface PrivateInsuranceData { provider: string; policyNumber: string; expiryDate: string; frontImg: string | null; backImg: string | null; estimatedCoverage: number; isActive: boolean }
+// --- COMPONENT: PRIVATE INSURANCE (WITH EXPIRY) ---
 function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuranceData) => void, data: PrivateInsuranceData }) {
     const { toast } = useToast()
     const [isScanning, setIsScanning] = useState(false)
-    const handleScanCard = () => { setIsScanning(true); setTimeout(() => { setIsScanning(false); onChange({ ...data, isActive: true, provider: "baoviet", policyNumber: "BV-8899-X", expiryDate: "2025-12-31", frontImg: "captured", backImg: "captured", estimatedCoverage: 0.8 }); toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) }, 2000) }
+    
+    const handleScanCard = () => { 
+        setIsScanning(true); 
+        setTimeout(() => { 
+            setIsScanning(false); 
+            onChange({ ...data, isActive: true, provider: "baoviet", policyNumber: "BV-8899-X", expiryDate: "2025-12-31", frontImg: "captured", backImg: "captured", estimatedCoverage: 0.8 }); 
+            toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) 
+        }, 2000) 
+    }
+    
     const toggleActive = () => { if (!data.isActive) { onChange({ ...data, isActive: true }) } else { onChange({ ...data, isActive: false }) } }
-    return ( <Card className={cn("border-t-4 shadow-sm transition-all h-full", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}><CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between"><CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}><Shield className="h-4 w-4"/> Private Ins.</CardTitle><div className="flex items-center gap-2"><Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-6 text-[10px]" onClick={toggleActive}>{data.isActive ? "Remove" : "Add"}</Button></div></CardHeader>{data.isActive && (<CardContent className="p-4 space-y-4"><div className="grid grid-cols-2 gap-2"><button onClick={handleScanCard} className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.frontImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>{data.frontImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}<span className="text-[9px] uppercase font-bold text-slate-500">Front</span></button><button className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>{data.backImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}<span className="text-[9px] uppercase font-bold text-slate-500">Back</span></button></div><div className="space-y-2"><Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Policy #" className="h-8 text-xs font-mono"/><Input type="date" value={data.expiryDate} onChange={(e) => onChange({...data, expiryDate: e.target.value})} className="h-8 text-xs font-mono"/></div><div className="flex justify-between items-center"><span className="text-xs text-slate-500">Est. Coverage</span><span className="font-bold text-sky-600 text-sm">{(data.estimatedCoverage * 100).toFixed(0)}%</span></div></CardContent>)}</Card>)
+    
+    return ( 
+        <Card className={cn("border-t-4 shadow-sm transition-all h-full", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}>
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+                <CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}>
+                    <Shield className="h-4 w-4"/> Private Ins.
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                    <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-6 text-[10px]" onClick={toggleActive}>{data.isActive ? "Remove" : "Add"}</Button>
+                </div>
+            </CardHeader>
+            {data.isActive && (
+                <CardContent className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        <button onClick={handleScanCard} className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.frontImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
+                            {data.frontImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
+                            <span className="text-[9px] uppercase font-bold text-slate-500">Front</span>
+                        </button>
+                        <button className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
+                            {data.backImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
+                            <span className="text-[9px] uppercase font-bold text-slate-500">Back</span>
+                        </button>
+                    </div>
+                    <div className="space-y-2">
+                        <Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Policy #" className="h-8 text-xs font-mono"/>
+                        <Input type="date" value={data.expiryDate} onChange={(e) => onChange({...data, expiryDate: e.target.value})} className="h-8 text-xs font-mono"/>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-500">Est. Coverage</span>
+                        <span className="font-bold text-sky-600 text-sm">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
+                    </div>
+                </CardContent>
+            )}
+        </Card>
+    )
 }
 
-// --- 5. RELATED PARTIES (Restored) ---
+// --- COMPONENT: RELATED PARTIES ---
 function RelatedPartiesCard() {
     const { toast } = useToast()
     const [parties, setParties] = useState<any[]>([])
     const [scanRelativeStep, setScanRelativeStep] = useState<"idle" | "scanning">("idle")
-    const handleManualRelative = () => { const newPerson = { id: `rel-m-${Math.random()}`, name: "NEW RELATED PARTY", relation: "other", phone: "", citizenId: "", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; setParties(prev => [...prev, newPerson]) }
-    const handleScanRelative = () => { setScanRelativeStep("scanning"); setTimeout(() => { setScanRelativeStep("idle"); const newPerson = { id: `rel-${Math.random()}`, name: "TRẦN MAI ANH", relation: "child", phone: "N/A", citizenId: "0792...", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; setParties(prev => [...prev, newPerson]); toast({ title: "Identity Linked", description: `Added ${newPerson.name}.` }) }, 1500) }
+    
+    const handleManualRelative = () => { 
+        const newPerson = { id: `rel-m-${Math.random()}`, name: "NEW RELATED PARTY", relation: "other", phone: "", citizenId: "", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; 
+        setParties(prev => [...prev, newPerson]) 
+    }
+    
+    const handleScanRelative = () => { 
+        setScanRelativeStep("scanning"); 
+        setTimeout(() => { 
+            setScanRelativeStep("idle"); 
+            const newPerson = { id: `rel-${Math.random()}`, name: "TRẦN MAI ANH", relation: "child", phone: "N/A", citizenId: "0792...", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; 
+            setParties(prev => [...prev, newPerson]); 
+            toast({ title: "Identity Linked", description: `Added ${newPerson.name}.` }) 
+        }, 1500) 
+    }
+    
     const toggleRole = (id: string, role: string) => { setParties(prev => prev.map(p => { if (p.id !== id) return p; return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } } })) }
     const updatePartyName = (id: string, name: string) => setParties(prev => prev.map(p => p.id === id ? { ...p, name } : p))
-    return ( <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white"><CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle><div className="flex gap-2"><Button size="sm" variant="outline" onClick={handleManualRelative} className="h-7 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button><Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-7 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan ID</Button></div></CardHeader><CardContent className="p-0">{parties.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm italic">No related parties linked yet.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-3 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50"><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs">{party.name.charAt(0)}</div><Input className="h-7 text-sm font-bold border-none p-0 focus-visible:ring-0 bg-transparent w-40" value={party.name} onChange={(e) => updatePartyName(party.id, e.target.value)} /></div><div className="flex gap-2"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1", party.roles.isEmergency ? "bg-red-50 text-red-700 border-red-200" : "bg-white text-slate-400")}>{party.roles.isEmergency && <Siren className="h-3 w-3"/>} Emergency</button></div></div>))}</div>)}</CardContent></Card> )
+    
+    return ( 
+        <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white">
+            <CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle>
+                <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={handleManualRelative} className="h-7 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button>
+                    <Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-7 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan ID</Button>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                {parties.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm italic">No related parties linked yet.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-3 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50"><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs">{party.name.charAt(0)}</div><Input className="h-7 text-sm font-bold border-none p-0 focus-visible:ring-0 bg-transparent w-40" value={party.name} onChange={(e) => updatePartyName(party.id, e.target.value)} /></div><div className="flex gap-2"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1", party.roles.isEmergency ? "bg-red-50 text-red-700 border-red-200" : "bg-white text-slate-400")}>{party.roles.isEmergency && <Siren className="h-3 w-3"/>} Emergency</button></div></div>))}</div>)}
+            </CardContent>
+        </Card> 
+    )
 }
 
-// --- 6. VITAL SIGNS (Restored) ---
-const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => ( <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div> )
+// --- 6. VITAL SIGNS (Input Bug Fixed) ---
+const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => ( 
+    <div className="relative">
+        <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
+        <div className="relative">
+            <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} />
+            <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
+        </div>
+    </div> 
+)
 function VitalSignsMonitor({ nurseName }: { nurseName: string }) {
     const { toast } = useToast()
     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" })
     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
     const saveVitals = () => { toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" }) }
-    return ( <Card className="border-t-4 border-t-red-500 shadow-sm"><CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4"/> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader><CardContent className="p-4"><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v:string) => handleInputChange('height', v)} /><UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v:string) => handleInputChange('weight', v)} /><div className="space-y-1"><Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label><div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e=>handleInputChange('bpSys', e.target.value)}/><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e=>handleInputChange('bpDia', e.target.value)}/></div></div><UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v:string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button></CardContent></Card> )
+    return ( 
+        <Card className="border-t-4 border-t-red-500 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4"/> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader>
+            <CardContent className="p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v:string) => handleInputChange('height', v)} />
+                    <UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v:string) => handleInputChange('weight', v)} />
+                    <div className="space-y-1">
+                        <Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label>
+                        <div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e=>handleInputChange('bpSys', e.target.value)}/><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e=>handleInputChange('bpDia', e.target.value)}/></div>
+                    </div>
+                    <UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v:string) => handleInputChange('temp', v)} />
+                </div>
+                <Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button>
+            </CardContent>
+        </Card> 
+    )
 }
 
-// --- 7. VISUAL OBSERVATIONS (Restored with Tags) ---
+// --- 7. VISUAL OBSERVATIONS (Tags & Multi-Intent) ---
 function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalIntents: string[] }) {
     const { toast } = useToast()
     const [capturedImages, setCapturedImages] = useState<Record<string, { tags: string[], captured: boolean }>>({})
-    const combinedPrompts = useMemo(() => { const allPrompts: VisualPrompt[] = []; const seenIds = new Set(); selectedIntents.forEach(intentId => { const intent = medicalIntents.find(i => i.id === intentId); if (intent) { intent.visualPrompts.forEach(p => { if (!seenIds.has(p.id)) { seenIds.add(p.id); allPrompts.push(p) } }) } }); return allPrompts }, [selectedIntents])
+    
+    const combinedPrompts = useMemo(() => { 
+        const allPrompts: VisualPrompt[] = []; 
+        const seenIds = new Set(); 
+        selectedIntents.forEach(intentId => { 
+            const intent = medicalIntents.find(i => i.id === intentId); 
+            if (intent) { 
+                intent.visualPrompts.forEach(p => { 
+                    if (!seenIds.has(p.id)) { seenIds.add(p.id); allPrompts.push(p) } 
+                }) 
+            } 
+        }); 
+        return allPrompts 
+    }, [selectedIntents])
+    
     if (!selectedIntents.length || combinedPrompts.length === 0) return null
+    
     const handleCapture = (promptId: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { tags: [], captured: true } })); toast({ title: "Captured", description: "Select tags." }) }
     const toggleTag = (promptId: string, tag: string) => { setCapturedImages(prev => { const current = prev[promptId]?.tags || []; const updated = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag]; return { ...prev, [promptId]: { ...prev[promptId], tags: updated } } }) }
-    return ( <Card className="border-t-4 border-t-purple-500 shadow-sm"><CardHeader className="pb-2 bg-purple-50/50"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visuals</CardTitle></CardHeader><CardContent className="p-3 grid grid-cols-2 gap-3">{combinedPrompts.map(prompt => { const data = capturedImages[prompt.id]; const tags = prompt.availableTags; return (<div key={prompt.id} className="border rounded p-2 text-center">{data?.captured ? (<div className="space-y-2"><div className="h-24 bg-slate-900 rounded flex items-center justify-center text-white text-xs">IMG Captured</div><div className="flex flex-wrap gap-1 justify-center">{tags.map(tag => (<button key={tag} onClick={() => toggleTag(prompt.id, tag)} className={cn("text-[9px] px-1.5 py-0.5 rounded border", data.tags.includes(tag) ? "bg-purple-600 text-white" : "bg-white")}>{tag}</button>))}</div></div>) : (<button onClick={() => handleCapture(prompt.id)} className="w-full h-24 flex flex-col items-center justify-center bg-slate-50 hover:bg-purple-50 text-slate-400 hover:text-purple-600 transition-colors gap-2"><Camera className="h-6 w-6"/><span className="text-xs font-bold">{prompt.label}</span></button>)}</div>) })}</CardContent></Card> )
+    
+    return ( 
+        <Card className="border-t-4 border-t-purple-500 shadow-sm">
+            <CardHeader className="pb-2 bg-purple-50/50"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visuals</CardTitle></CardHeader>
+            <CardContent className="p-3 grid grid-cols-2 gap-3">
+                {combinedPrompts.map(prompt => { 
+                    const data = capturedImages[prompt.id]; 
+                    const tags = prompt.availableTags; 
+                    return (
+                        <div key={prompt.id} className="border rounded p-2 text-center">
+                            {data?.captured ? (
+                                <div className="space-y-2">
+                                    <div className="h-24 bg-slate-900 rounded flex items-center justify-center text-white text-xs">IMG Captured</div>
+                                    <div className="flex flex-wrap gap-1 justify-center">{tags.map(tag => (<button key={tag} onClick={() => toggleTag(prompt.id, tag)} className={cn("text-[9px] px-1.5 py-0.5 rounded border", data.tags.includes(tag) ? "bg-purple-600 text-white" : "bg-white")}>{tag}</button>))}</div>
+                                </div>
+                            ) : (
+                                <button onClick={() => handleCapture(prompt.id)} className="w-full h-24 flex flex-col items-center justify-center bg-slate-50 hover:bg-purple-50 text-slate-400 hover:text-purple-600 transition-colors gap-2"><Camera className="h-6 w-6"/><span className="text-xs font-bold">{prompt.label}</span></button>
+                            )}
+                        </div>
+                    ) 
+                })}
+            </CardContent>
+        </Card> 
+    )
 }
 
-// --- 8. TELEHEALTH (Restored) ---
+// --- 8. TELEHEALTH (Specialty Filter) ---
 function TelehealthDispatchCard({ medicalIntents: selectedIntents }: { medicalIntents: string[] }) {
     const { toast } = useToast()
     const [specialtyFilter, setSpecialtyFilter] = useState("all")
     const uniqueSpecialties = useMemo(() => ["all", ...Array.from(new Set(doctorPool.map(d => d.specialty)))], [])
-    const filteredDoctors = useMemo(() => { let docs = [...doctorPool]; if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter); return docs }, [specialtyFilter])
+    
+    const filteredDoctors = useMemo(() => { 
+        let docs = [...doctorPool]; 
+        if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter); 
+        return docs 
+    }, [specialtyFilter])
+    
     if (selectedIntents.length === 0) return null
-    return ( <Card className="border-t-4 border-t-pink-500 shadow-sm"><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2"><Video className="h-4 w-4"/> Telehealth</CardTitle><Select value={specialtyFilter} onValueChange={setSpecialtyFilter}><SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="Specialty" /></SelectTrigger><SelectContent>{uniqueSpecialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></CardHeader><CardContent className="p-0 max-h-40 overflow-y-auto">{filteredDoctors.map(dr => (<div key={dr.id} className="p-2 border-b flex justify-between items-center hover:bg-slate-50"><div className="flex items-center gap-2"><div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px]", dr.avatarColor)}>{dr.name.substring(0,2)}</div><div><div className="text-xs font-bold">{dr.name}</div><div className="text-[9px] text-slate-500">{dr.specialty}</div></div></div><Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => toast({title: "Booked"})}>Book</Button></div>))}</CardContent></Card> )
+    
+    return ( 
+        <Card className="border-t-4 border-t-pink-500 shadow-sm">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2"><Video className="h-4 w-4"/> Telehealth</CardTitle>
+                <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}><SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="Specialty" /></SelectTrigger><SelectContent>{uniqueSpecialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+            </CardHeader>
+            <CardContent className="p-0 max-h-40 overflow-y-auto">
+                {filteredDoctors.map(dr => (
+                    <div key={dr.id} className="p-2 border-b flex justify-between items-center hover:bg-slate-50">
+                        <div className="flex items-center gap-2">
+                            <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px]", dr.avatarColor)}>{dr.name.substring(0,2)}</div>
+                            <div><div className="text-xs font-bold">{dr.name}</div><div className="text-[9px] text-slate-500">{dr.specialty}</div></div>
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => toast({title: "Booked"})}>Book</Button>
+                    </div>
+                ))}
+            </CardContent>
+        </Card> 
+    )
 }
 
 // --- MAIN PAGE ---
@@ -432,6 +576,14 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
     if (!testSearchQuery) return []
     return labTestsData.filter(t => t.name.toLowerCase().includes(testSearchQuery.toLowerCase()))
   }, [testSearchQuery])
+  
+  // Suggested Logic
+  const suggestedTests = useMemo(() => { 
+      if (formData.selectedIntents.length === 0) return []; 
+      const allTestIds = new Set<string>();
+      formData.selectedIntents.forEach(id => { const intent = medicalIntents.find(i => i.id === id); if(intent) intent.recommended.forEach(tId => allTestIds.add(tId)) });
+      return Array.from(allTestIds).map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[] 
+  }, [formData.selectedIntents])
 
   // Scan Logic
   const handleScanComplete = () => {
@@ -459,6 +611,11 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
 
   const addTest = (test: LabTest) => { 
       if (!selectedTests.find(t => t.id === test.id)) { setSelectedTests(prev => [...prev, test]); setTestSearchQuery(""); }
+  }
+
+  const checkInsuranceEligibility = (test: LabTest, patient: any) => {
+      if(!patient?.bhyt) return { isCovered: false, coveragePercent: 0 };
+      return { isCovered: true, coveragePercent: 0.8 }; // Mock logic
   }
 
   return (
@@ -521,49 +678,38 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                     {/* 8. Visual Observations */}
                     <div className="md:col-span-2"><VisualObservationCard medicalIntents={formData.selectedIntents} /></div>
 
-                    {/* 9. Order Entry (Fixed Search UI) */}
-                    {suggestedTests.length > 0 && (
-    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4 animate-in fade-in slide-in-from-top-2">
-        <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-indigo-600"/> Recommended Protocol
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {suggestedTests.map(test => { 
-                const eligible = checkInsuranceEligibility(test, scannedIdentity); 
-                return (
-                    <button 
-                        key={test.id} 
-                        onClick={() => addTest(test)} 
-                        className="text-left p-2.5 rounded-lg border bg-white border-indigo-200 hover:border-indigo-400 hover:shadow-md transition-all flex justify-between items-center group"
-                    >
-                        <div>
-                            <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">
-                                {test.name}
-                            </div>
-                            <div className="text-[10px] text-slate-500 mt-0.5">
-                                {eligible.coveragePercent === 1.0 ? (
-                                    <span className="text-emerald-600 font-bold flex items-center gap-1">
-                                        <ShieldCheck className="h-3 w-3"/> 100% Covered
-                                    </span>
-                                ) : (
-                                    formatCurrency(test.price)
-                                )}
-                            </div>
-                        </div>
-                        <PlusCircle className="h-5 w-5 text-indigo-300 group-hover:text-indigo-600 transition-colors"/>
-                    </button>
-                )
-            })}
-        </div>
-    </div>
-)}
+                    {/* 9. Order Entry (Fixed Search UI & Recs) */}
                     <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
+                            {/* Recommended Protocol Block */}
+                            {suggestedTests.length > 0 && (
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4 animate-in fade-in slide-in-from-top-2">
+                                    <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-indigo-600"/> Recommended Protocol</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {suggestedTests.map(test => { 
+                                            const eligible = checkInsuranceEligibility(test, scannedIdentity); 
+                                            return (
+                                                <button key={test.id} onClick={() => addTest(test)} className="text-left p-2.5 rounded-lg border bg-white border-indigo-200 hover:border-indigo-400 hover:shadow-md transition-all flex justify-between items-center group">
+                                                    <div>
+                                                        <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">{test.name}</div>
+                                                        <div className="text-[10px] text-slate-500 mt-0.5">{eligible.coveragePercent === 1.0 ? (<span className="text-emerald-600 font-bold flex items-center gap-1"><ShieldCheck className="h-3 w-3"/> 100% Covered</span>) : (formatCurrency(test.price))}</div>
+                                                    </div>
+                                                    <PlusCircle className="h-5 w-5 text-indigo-300 group-hover:text-indigo-600 transition-colors"/>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Search Bar */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                                 <Input className="pl-10 h-10" placeholder="Search tests (e.g., 'hemo')..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)}/>
                             </div>
+                            
+                            {/* Search Results */}
                             {testSearchQuery && (
                                 <div className="border rounded-md divide-y divide-slate-100 max-h-60 overflow-y-auto shadow-sm">
                                     {filteredTests.length > 0 ? filteredTests.map(test => (

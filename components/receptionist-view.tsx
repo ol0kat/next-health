@@ -32,12 +32,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // --- TYPES ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
-
-
-
-
-
-
 interface VisualPrompt {
     id: string;
     label: string;
@@ -63,77 +57,6 @@ interface PrivateInsuranceData {
 }
 
 // --- MOCK DATA ---
-
-
-
-
-
-
-
-
-
-
-
-// --- PASTE THIS INSIDE ReceptionistView ---
-
-  // 1. UPDATE STATE (Removed admissionType, added phonePrefix)
-  const [scanStep, setScanStep] = useState<"idle" | "cccd" | "checking-bhyt" | "complete">("idle")
-  const [scannedIdentity, setScannedIdentity] = useState<any>(null)
-  
-  const [formData, setFormData] = useState({ 
-      fullName: "", dob: "", gender: "", citizenId: "", 
-      phonePrefix: "+84", phone: "", email: "", address: "", // Added phonePrefix
-      selectedIntents: [] as string[]
-  })
-
-  // 2. UPDATE HANDLERS (Scan & Manual BHYT Check)
-  const simulateBHYTFetch = (name: string, cid: string) => {
-      setScanStep("checking-bhyt");
-      toast({ title: "Checking Insurance...", description: `Verifying BHYT for ${name}` });
-      
-      setTimeout(() => {
-          // Mock Logic: If CID starts with "079", found. Else, not found.
-          const found = cid.startsWith("079"); 
-          
-          if (found) {
-              setScannedIdentity((prev:any) => ({ 
-                  ...prev, 
-                  bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" } 
-              }));
-              toast({ title: "Insurance Verified", description: "BHYT data retrieved successfully.", className: "bg-emerald-600 text-white" });
-          } else {
-               toast({ title: "No Insurance Found", description: "Could not find BHYT records for this ID.", variant: "destructive" });
-          }
-          setScanStep("complete");
-      }, 1500);
-  }
-
-  const handleScanComplete = () => {
-      setScanStep("cccd");
-      setTimeout(() => {
-          const extracted = { name: "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", gender: "female", citizenId: "079192000123", address: "123 Nguyen Hue, D1" };
-          setScannedIdentity(extracted);
-          setFormData(prev => ({ ...prev, fullName: extracted.name, dob: extracted.dob, gender: extracted.gender, citizenId: extracted.citizenId, address: extracted.address }));
-          
-          // Auto-trigger BHYT check after scan
-          simulateBHYTFetch(extracted.name, extracted.citizenId);
-      }, 1000);
-  }
-
-  const handleManualBHYTCheck = () => {
-      if(!formData.fullName || !formData.citizenId) {
-          toast({ title: "Missing Info", description: "Please enter Name and ID to check insurance.", variant: "destructive" });
-          return;
-      }
-      simulateBHYTFetch(formData.fullName, formData.citizenId);
-  }
-
-
-
-
-
-
-
 const labTestsData: LabTest[] = [
   { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies" }, 
   { id: "cbc", name: "Complete Blood Count", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, popular: true, description: "Overall health, anemia, infection" },
@@ -269,6 +192,17 @@ function IdentityVerificationCard({
                                         <div className="text-sm font-bold text-slate-800">{bhytData.expiry}</div>
                                     </div>
                                 </div>
+                                <div className="pt-2 border-t border-slate-200">
+                                    {internalAccess === 'locked' ? (
+                                        <Button onClick={onInternalHistoryClick} variant="outline" size="sm" className="w-full h-7 text-xs border-amber-300 bg-amber-50 text-amber-800 border-dashed">
+                                            <Lock className="h-3 w-3 mr-2" /> Unlock History
+                                        </Button>
+                                    ) : (
+                                        <div className="text-center text-xs text-emerald-600 font-bold flex items-center justify-center gap-1">
+                                            <History className="h-3 w-3"/> History Unlocked
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center space-y-2 min-h-[100px] border-2 border-dashed rounded-lg border-slate-200">
@@ -283,6 +217,7 @@ function IdentityVerificationCard({
         </Card>
     )
 }
+
 // --- COMPONENT: DEMOGRAPHICS (UPDATED) ---
 function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
     return (
@@ -353,6 +288,7 @@ function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
         </Card>
     )
 }
+
 // --- COMPONENT: FINANCIAL INFO ---
 function FinancialInfoCard({ data, setData }: any) {
     return (
@@ -617,13 +553,12 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   const { toast } = useToast()
   
   // STATE
-  const [admissionType, setAdmissionType] = useState<"citizen" | "foreigner">("citizen")
   const [scanStep, setScanStep] = useState<"idle" | "cccd" | "checking-bhyt" | "complete">("idle")
-  
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
+  
   const [formData, setFormData] = useState({ 
       fullName: "", dob: "", gender: "", citizenId: "", 
-      phone: "", email: "", address: "",
+      phonePrefix: "+84", phone: "", email: "", address: "",
       selectedIntents: [] as string[] // Clinical Intents
   })
   
@@ -648,20 +583,39 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
       return Array.from(allTestIds).map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[] 
   }, [formData.selectedIntents])
 
-  // Scan Logic
+  // Helper for BHYT Fetch
+  const simulateBHYTFetch = (name: string, cid: string) => {
+      setScanStep("checking-bhyt");
+      toast({ title: "Checking Insurance...", description: `Verifying BHYT for ${name}` });
+      setTimeout(() => {
+          const found = cid.startsWith("079"); 
+          if (found) {
+              setScannedIdentity((prev:any) => ({ ...prev, bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" } }));
+              toast({ title: "Insurance Verified", description: "BHYT data retrieved successfully.", className: "bg-emerald-600 text-white" });
+          } else {
+               toast({ title: "No Insurance Found", description: "Could not find BHYT records for this ID.", variant: "destructive" });
+          }
+          setScanStep("complete");
+      }, 1500);
+  }
+
+  // Handlers
   const handleScanComplete = () => {
       setScanStep("cccd");
       setTimeout(() => {
           const extracted = { name: "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", gender: "female", citizenId: "079192000123", address: "123 Nguyen Hue, D1" };
           setScannedIdentity(extracted);
           setFormData(prev => ({ ...prev, fullName: extracted.name, dob: extracted.dob, gender: extracted.gender, citizenId: extracted.citizenId, address: extracted.address }));
-          setScanStep("checking-bhyt");
-          setTimeout(() => {
-              setScannedIdentity((prev:any) => ({ ...prev, bhyt: { code: "DN4797915071630", coverageLabel: "80%", expiry: "31/12/2025" } }));
-              setScanStep("complete");
-              toast({ title: "Scan Complete", description: "Identity & Insurance retrieved." });
-          }, 1000);
+          simulateBHYTFetch(extracted.name, extracted.citizenId);
       }, 1000);
+  }
+
+  const handleManualBHYTCheck = () => {
+      if(!formData.fullName || !formData.citizenId) {
+          toast({ title: "Missing Info", description: "Please enter Name and ID to check insurance.", variant: "destructive" });
+          return;
+      }
+      simulateBHYTFetch(formData.fullName, formData.citizenId);
   }
 
   const toggleIntent = (id: string) => {
@@ -689,23 +643,21 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
             <div className="max-w-5xl mx-auto space-y-6 pb-24">
                 <div><h1 className="text-2xl font-bold text-slate-900">Patient Admission</h1></div>
                 
-                {/* 1. Identity (Dual Flow) */}
-<IdentityVerificationCard 
-    scanStep={scanStep} 
-    onScanComplete={handleScanComplete}
-    bhytData={scannedIdentity?.bhyt} 
-    internalAccess={internalAccess}
-    onInternalHistoryClick={() => setInternalAccess('unlocked')}
-/>
+                {/* 1. Identity & BHYT (Unified) */}
+                <IdentityVerificationCard 
+                    scanStep={scanStep} onScanComplete={handleScanComplete}
+                    bhytData={scannedIdentity?.bhyt} internalAccess={internalAccess}
+                    onInternalHistoryClick={() => setInternalAccess('unlocked')}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 2. Demographics (Expanded) */}
                     <div className="md:col-span-2">
-                      <DemographicsCard 
-    formData={formData} 
-    setFormData={setFormData} 
-    onCheckBHYT={handleManualBHYTCheck} // Pass the handler
-/>
+                        <DemographicsCard 
+                            formData={formData} 
+                            setFormData={setFormData} 
+                            onCheckBHYT={handleManualBHYTCheck}
+                        />
                     </div>
 
                     {/* 3. Financial Info */}

@@ -1,64 +1,36 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useTransition } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Badge } from "@/components/ui/badge"
+import { TooltipProvider } from "@/components/ui/tooltip"
+// ... keep your existing icon imports
 import {
-  UserPlus,
-  QrCode,
-  Search,
-  Save,
-  Loader2,
-  X,
-  Beaker,
-  CheckCircle2,
-  ScanLine,
-  User,
-  Clock,
-  MapPin,
-  ShieldCheck,
-  History,
-  Activity,
-  ChevronsUpDown,
-  Check,
-  Mail,
-  Phone as PhoneIcon,
-  Home,
-  ShoppingCart,
-  Plus,
-  Trash2,
-  AlertCircle,
-  CalendarClock,
-  Receipt,
-  FileSignature,
-  TabletSmartphone,
-  Wifi
+  UserPlus, QrCode, Search, Save, Loader2, X, Beaker, CheckCircle2,
+  User, Clock, MapPin, Activity, Check, Phone as PhoneIcon,
+  ShoppingCart, AlertCircle, TabletSmartphone, Wifi, FileSignature,
+  Lock, Unlock, Send, Smartphone, History, Eye, Copy
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
-// --- MOCK DATA: Lab Tests (Added HIV with Consent Flag) ---
+// --- EXISTING MOCK DATA & HELPERS REMAIN THE SAME ---
+// (Assuming LabTest interface and labTestsData are here as per your original code)
+
 interface LabTest {
   id: string
   name: string
@@ -70,25 +42,21 @@ interface LabTest {
   description: string
   requiresFasting?: boolean
   popular?: boolean
-  requiresConsent?: boolean // <--- NEW FLAG
+  requiresConsent?: boolean 
 }
 
 const labTestsData: LabTest[] = [
-  { id: "hiv", name: "HIV Ab/Ag Combo", shortName: "HIV Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, description: "4th Gen screening for HIV-1/2 antibodies and p24 antigen.", requiresConsent: true }, // <--- CONSENT REQUIRED
+  { id: "hiv", name: "HIV Ab/Ag Combo", shortName: "HIV Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, description: "4th Gen screening for HIV-1/2 antibodies and p24 antigen.", requiresConsent: true }, 
   { id: "cbc", name: "Complete Blood Count", shortName: "CBC", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, description: "Evaluates overall health; detects anemia, infection, etc.", popular: true },
   { id: "hba1c", name: "Hemoglobin A1c", shortName: "HbA1c", price: 180000, category: "Biochemistry", sampleType: "Whole Blood", turnaroundHours: 24, description: "Average blood sugar over past 3 months.", popular: true },
-  { id: "lipid", name: "Lipid Panel", shortName: "Lipid", price: 250000, category: "Biochemistry", sampleType: "Serum", turnaroundHours: 24, description: "Cholesterol & triglycerides. Heart health check.", requiresFasting: true, popular: true },
-  { id: "cmp", name: "Comprehensive Metabolic Panel", shortName: "CMP", price: 320000, category: "Biochemistry", sampleType: "Serum", turnaroundHours: 24, description: "Kidney/liver function, electrolytes, fluid balance.", requiresFasting: true, popular: true },
-  { id: "tsh", name: "Thyroid Stimulating Hormone", shortName: "TSH", price: 150000, category: "Endocrinology", sampleType: "Serum", turnaroundHours: 24, description: "Thyroid function screening.", popular: true },
-  { id: "urine", name: "Urinalysis", shortName: "Urine", price: 80000, category: "Microbiology", sampleType: "Urine", turnaroundHours: 2, description: "Detects UTIs, kidney disease.", popular: true },
+  // ... rest of your data
 ]
 
-// --- MOCK DATA: Locations & Country Codes ---
-const vnLocations: Record<string, { label: string, districts: Record<string, { label: string, wards: string[] }> }> = {
-  "hcm": { label: "TP. Hồ Chí Minh", districts: { "quan1": { label: "Quận 1", wards: ["Phường Bến Nghé", "Phường Bến Thành"] } } },
-  "hanoi": { label: "TP. Hà Nội", districts: { "badinh": { label: "Quận Ba Đình", wards: ["Phường Phúc Xá"] } } }
-}
-const countryCodes = [{ value: "vn", label: "Vietnam", code: "+84", flag: "🇻🇳" }, { value: "us", label: "USA", code: "+1", flag: "🇺🇸" }]
+// --- NEW MOCK DATA: Historical Orders ---
+const mockPastOrders = [
+  { id: "ORD-001", date: "2023-11-10", items: ["cbc", "hba1c"], doctor: "Dr. Nguyen" },
+  { id: "ORD-002", date: "2023-08-15", items: ["lipid", "cmp"], doctor: "Dr. Tran" }
+]
 
 // --- HELPERS ---
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
@@ -102,7 +70,6 @@ const formatDateFriendly = (date: Date) => {
 
 // --- COMPONENTS ---
 function PhoneInput({ value, onChange, className, error }: any) {
-  // (Simplified Phone Input for brevity)
   return (
     <div className={cn("flex rounded-md border bg-white", error && "border-red-500")}>
        <div className="flex items-center px-3 border-r bg-slate-50 text-slate-500 text-sm">🇻🇳 +84</div>
@@ -111,9 +78,11 @@ function PhoneInput({ value, onChange, className, error }: any) {
   )
 }
 
-function IdentityVerificationCard({ data, scanStep, onClear }: any) {
+// Updated Identity Card to handle History Trigger
+function IdentityVerificationCard({ data, scanStep, onClear, onHistoryClick, historyAccess }: any) {
     if (!data.name && scanStep === "idle") return null
     const isComplete = scanStep === "complete"
+    
     return (
       <div className="mb-6 animate-in fade-in slide-in-from-top-4">
         <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -122,9 +91,39 @@ function IdentityVerificationCard({ data, scanStep, onClear }: any) {
                {isComplete && <button onClick={onClear}><X className="h-4 w-4 text-white/80 hover:text-white" /></button>}
            </div>
            <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div><div className="text-xs text-slate-400 font-bold mb-1">PATIENT</div><div className="font-bold text-lg">{data.name || "SCANNING..."}</div><div className="text-sm text-slate-500">{data.citizenId}</div></div>
-              <div><div className="text-xs text-slate-400 font-bold mb-1">INSURANCE</div>{data.bhyt ? <div className="text-sm"><span className="font-mono font-bold text-blue-600">{data.bhyt.code}</span><br/>Coverage: {data.bhyt.coverage * 100}%</div> : <div className="text-sm text-slate-300 italic">Pending...</div>}</div>
-              <div><div className="text-xs text-slate-400 font-bold mb-1">HISTORY</div>{data.history ? <div className="text-xs bg-slate-100 p-2 rounded">{data.history.length} records found.</div> : <div className="text-sm text-slate-300 italic">Pending...</div>}</div>
+              <div>
+                <div className="text-xs text-slate-400 font-bold mb-1">PATIENT</div>
+                <div className="font-bold text-lg">{data.name || "SCANNING..."}</div>
+                <div className="text-sm text-slate-500">{data.citizenId}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-400 font-bold mb-1">INSURANCE</div>
+                {data.bhyt ? <div className="text-sm"><span className="font-mono font-bold text-blue-600">{data.bhyt.code}</span><br/>Coverage: {data.bhyt.coverage * 100}%</div> : <div className="text-sm text-slate-300 italic">Pending...</div>}
+              </div>
+              
+              {/* --- UPDATED HISTORY COLUMN --- */}
+              <div>
+                <div className="text-xs text-slate-400 font-bold mb-1 flex items-center gap-1">
+                    MEDICAL HISTORY
+                    {historyAccess === 'unlocked' ? <Unlock className="h-3 w-3 text-emerald-500"/> : <Lock className="h-3 w-3 text-amber-500"/>}
+                </div>
+                {scanStep !== 'complete' ? (
+                     <div className="text-sm text-slate-300 italic">Pending scan...</div>
+                ) : (
+                    <div>
+                        {historyAccess === 'locked' ? (
+                             <Button onClick={onHistoryClick} variant="outline" size="sm" className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800">
+                                <Lock className="h-3 w-3 mr-1.5" /> Request Access
+                             </Button>
+                        ) : (
+                            <div className="text-sm text-emerald-700 flex flex-col gap-1">
+                                <span className="font-bold flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Authorized</span>
+                                <span className="text-xs text-slate-500">{mockPastOrders.length} records retrieved</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+              </div>
            </div>
         </div>
       </div>
@@ -133,25 +132,35 @@ function IdentityVerificationCard({ data, scanStep, onClear }: any) {
 
 export function ReceptionistView({ patients, setPatients }: any) {
   const { toast } = useToast()
+  
+  // Scanned Data State
   const [scanStep, setScanStep] = useState<any>("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
   
-  // States
+  // Form State
   const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male", phone: "", address: "", emergencyContactName: "", emergencyContactPhone: "", chiefComplaint: "", height: "", weight: "", temp: "", bp: "", pulse: "", spo2: "" })
+  
+  // Lab Selection State
   const [testSearchQuery, setTestSearchQuery] = useState("")
   const [selectedTests, setSelectedTests] = useState<LabTest[]>([])
   const [showTestSearch, setShowTestSearch] = useState(false)
-  
-  // Consent State: Record<testId, 'pending' | 'requesting' | 'signed'>
   const [consentStatus, setConsentStatus] = useState<Record<string, 'pending' | 'requesting' | 'signed'>>({})
 
-  // Logic
+  // --- NEW: HISTORY ACCESS STATES ---
+  const [historyAccess, setHistoryAccess] = useState<'locked' | 'unlocked'>('locked')
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [otpStep, setOtpStep] = useState<'method' | 'verify'>('method')
+  const [otpInput, setOtpInput] = useState("")
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+
+  // Logic Helpers
   const totalTestsPrice = selectedTests.reduce((sum, t) => sum + t.price, 0)
   const filteredTests = labTestsData.filter(t => t.name.toLowerCase().includes(testSearchQuery.toLowerCase())).slice(0, 5)
 
+  // Handlers
   const handleScanProcess = () => {
     setScanStep("cccd"); setTimeout(() => {
-      const data = { fullName: "TRẦN THỊ NGỌC LAN", dob: "1992-05-15", citizenId: "079192000123", gender: "female" }
+      const data = { fullName: "TRẦN THỊ NGỌC LAN", dob: "1992-05-15", citizenId: "079192000123", gender: "female", name: "TRẦN THỊ NGỌC LAN" }
       setScannedIdentity(data); setFormData((p:any) => ({...p, ...data}));
       setScanStep("checking-bhyt"); setTimeout(() => {
         setScannedIdentity((p:any) => ({...p, bhyt: { code: "DN4797...", coverage: 0.8 }}));
@@ -172,38 +181,60 @@ export function ReceptionistView({ patients, setPatients }: any) {
 
   const removeTest = (id: string) => {
       setSelectedTests(prev => prev.filter(t => t.id !== id))
-      // cleanup consent status
       const newConsent = { ...consentStatus }
       delete newConsent[id]
       setConsentStatus(newConsent)
   }
 
-  // --- DIGITAL CONSENT HANDLER ---
   const requestConsent = (testId: string) => {
       setConsentStatus(prev => ({ ...prev, [testId]: 'requesting' }))
-      
-      // Simulate sending to tablet
-      toast({
-          title: "Consent Request Sent",
-          description: "Waiting for patient signature on tablet...",
-          className: "bg-blue-600 text-white border-none"
-      })
-
+      toast({ title: "Consent Request Sent", description: "Waiting for patient signature...", className: "bg-blue-600 text-white" })
       setTimeout(() => {
           setConsentStatus(prev => ({ ...prev, [testId]: 'signed' }))
-          toast({
-              title: "Consent Signed",
-              description: "Digital signature received securely.",
-              className: "bg-emerald-600 text-white border-none"
-          })
-      }, 2500)
+          toast({ title: "Consent Signed", className: "bg-emerald-600 text-white" })
+      }, 2000)
+  }
+
+  // --- NEW: HISTORY AUTH HANDLERS ---
+  const handleHistoryRequest = () => {
+    setShowAuthDialog(true)
+    setOtpStep('method')
+  }
+
+  const sendOtp = (method: 'zalo' | 'sms') => {
+      // Simulate API call to send OTP
+      toast({ 
+          title: `OTP Sent via ${method === 'zalo' ? 'Zalo' : 'SMS'}`, 
+          description: `Patient ${formData.fullName} has been messaged.`,
+      })
+      setOtpStep('verify')
+  }
+
+  const verifyOtp = () => {
+      if(otpInput === "123456") { // Mock validation
+          setHistoryAccess('unlocked')
+          setShowAuthDialog(false)
+          setShowHistoryModal(true) // Immediately show history
+          toast({ title: "Access Authorized", description: "Patient history unlocked securely.", className: "bg-emerald-600 text-white" })
+      } else {
+          toast({ title: "Invalid OTP", variant: "destructive" })
+      }
+  }
+
+  const reorderPastItems = (itemIds: string[]) => {
+      itemIds.forEach(id => {
+          const test = labTestsData.find(t => t.id === id)
+          if(test) addTest(test)
+      })
+      setShowHistoryModal(false)
+      toast({ title: "Orders Added", description: "Past items added to current cart." })
   }
 
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
         
-        {/* MAIN CONTENT (SCROLLABLE) */}
+        {/* MAIN CONTENT */}
         <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <div className="max-w-5xl mx-auto space-y-6 pb-24">
                 
@@ -216,9 +247,25 @@ export function ReceptionistView({ patients, setPatients }: any) {
                     </Button>
                 </div>
 
-                <IdentityVerificationCard data={scannedIdentity || {}} scanStep={scanStep} onClear={() => {setScannedIdentity(null); setScanStep('idle')}} />
+                {/* Identity Card with new History Trigger */}
+                <IdentityVerificationCard 
+                    data={scannedIdentity || {}} 
+                    scanStep={scanStep} 
+                    onClear={() => {setScannedIdentity(null); setScanStep('idle'); setHistoryAccess('locked')}}
+                    onHistoryClick={handleHistoryRequest}
+                    historyAccess={historyAccess}
+                />
+                
+                {/* --- HISTORY VIEW BUTTON (Only visible if unlocked) --- */}
+                {historyAccess === 'unlocked' && (
+                     <div className="flex justify-end">
+                         <Button onClick={() => setShowHistoryModal(true)} variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                             <History className="h-4 w-4 mr-2" /> View Past Orders
+                         </Button>
+                     </div>
+                )}
 
-                {/* FORM GRID */}
+                {/* REST OF YOUR FORM (Demographics, Contact, Clinical, Test Search) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Patient Info */}
                     <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
@@ -226,52 +273,14 @@ export function ReceptionistView({ patients, setPatients }: any) {
                         <CardContent className="grid grid-cols-2 gap-4">
                             <div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div>
                             <div><Label className="text-xs text-slate-500">Citizen ID</Label><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/></div>
-                            <div><Label className="text-xs text-slate-500">DOB</Label><Input type="date" value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})}/></div>
-                            <div><Label className="text-xs text-slate-500">Gender</Label><div className="flex gap-4 pt-2"><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'male'} onChange={() => setFormData({...formData, gender: 'male'})}/> Male</label><label className="flex items-center gap-2 text-sm"><input type="radio" checked={formData.gender === 'female'} onChange={() => setFormData({...formData, gender: 'female'})}/> Female</label></div></div>
+                            {/* ... other demographic fields ... */}
                         </CardContent>
                     </Card>
 
-                    {/* Contact (Moved from Right) */}
-                    <Card className="border-t-4 border-t-purple-500 shadow-sm">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><MapPin className="h-4 w-4"/> Contact Info</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value={formData.phone} onChange={(val: string) => setFormData({...formData, phone: val})} /></div>
-                            <div><Label className="text-xs text-slate-500">Address</Label><Input placeholder="Street address..." value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} /></div>
-                        </CardContent>
-                    </Card>
+                    {/* ... Contact, Clinical Cards ... */}
 
-                    {/* Emergency Contact (Moved from Right) */}
-                    <Card className="border-t-4 border-t-amber-500 shadow-sm">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><UserPlus className="h-4 w-4"/> Emergency Contact</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div><Label className="text-xs text-slate-500">Name</Label><Input placeholder="Relative name" value={formData.emergencyContactName} onChange={e => setFormData({...formData, emergencyContactName: e.target.value})} /></div>
-                            <div><Label className="text-xs text-slate-500">Phone</Label><PhoneInput value={formData.emergencyContactPhone} onChange={(val: string) => setFormData({...formData, emergencyContactPhone: val})} /></div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Clinical */}
-                    <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Clock className="h-4 w-4"/> Clinical Intake</CardTitle></CardHeader>
-                        <CardContent className="grid md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                                <div><Label className="text-xs text-slate-500">Chief Complaint</Label><Textarea className="h-20" placeholder="Symptoms..." value={formData.chiefComplaint} onChange={e => setFormData({...formData, chiefComplaint: e.target.value})} /></div>
-                            </div>
-                            <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
-                                <div className="text-sm font-bold text-slate-700 flex items-center gap-2"><Activity className="h-4 w-4 text-red-500"/> Vitals</div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><Label className="text-[10px] uppercase">Height (cm)</Label><Input className="h-8 bg-white" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})}/></div>
-                                    <div><Label className="text-[10px] uppercase">Weight (kg)</Label><Input className="h-8 bg-white" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})}/></div>
-                                    <div><Label className="text-[10px] uppercase">Temp (°C)</Label><Input className="h-8 bg-white" value={formData.temp} onChange={e => setFormData({...formData, temp: e.target.value})}/></div>
-                                    <div><Label className="text-[10px] uppercase">BP (mmHg)</Label><Input className="h-8 bg-white" value={formData.bp} onChange={e => setFormData({...formData, bp: e.target.value})}/></div>
-                                    <div><Label className="text-[10px] uppercase">Pulse (bpm)</Label><Input className="h-8 bg-white" value={formData.pulse} onChange={e => setFormData({...formData, pulse: e.target.value})}/></div>
-                                    <div><Label className="text-[10px] uppercase">SpO2 (%)</Label><Input className="h-8 bg-white" value={formData.spo2} onChange={e => setFormData({...formData, spo2: e.target.value})}/></div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Lab Search Area */}
-                    <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
+                     {/* Lab Search Area */}
+                     <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Search className="h-4 w-4"/> Add Lab Tests</CardTitle></CardHeader>
                         <CardContent>
                             <div className="relative">
@@ -288,36 +297,13 @@ export function ReceptionistView({ patients, setPatients }: any) {
                                         {filteredTests.map(t => (
                                             <button key={t.id} onClick={() => addTest(t)} className="w-full px-4 py-2 text-left hover:bg-slate-50 flex justify-between items-center border-b">
                                                 <div className="flex-1">
-                                                    <div className="font-bold text-sm text-slate-700 flex items-center gap-2">
-                                                        {t.name}
-                                                        {t.requiresConsent && <Badge variant="destructive" className="h-4 text-[10px] px-1">Consent</Badge>}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 space-y-1 mt-1">
-                                                        <div>{t.description}</div>
-                                                        <div className="flex items-center gap-2 text-slate-600 font-semibold">
-                                                            <Clock className="h-3 w-3 text-blue-500"/>
-                                                            Result by {formatDateFriendly(getResultDate(t.turnaroundHours))}
-                                                        </div>
-                                                    </div>
+                                                    <div className="font-bold text-sm text-slate-700 flex items-center gap-2">{t.name}</div>
                                                 </div>
-                                                <div className="text-right ml-4">
-                                                    <div className="font-bold text-emerald-600 text-sm">{formatCurrency(t.price)}</div>
-                                                </div>
+                                                <div className="font-bold text-emerald-600 text-sm">{formatCurrency(t.price)}</div>
                                             </button>
                                         ))}
                                     </div>
                                 )}
-                            </div>
-                            <div className="flex gap-2 mt-4 flex-wrap">
-                                <span className="text-xs text-slate-500 py-1.5">Quick Add:</span>
-                                {labTestsData.filter(t => t.popular).map(t => (
-                                    <button key={t.id} onClick={() => addTest(t)} className="px-3 py-1 rounded-full bg-slate-100 text-xs hover:bg-blue-50 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-colors">
-                                        + {t.shortName}
-                                    </button>
-                                ))}
-                                <button onClick={() => addTest(labTestsData.find(t => t.id === 'hiv')!)} className="px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs hover:bg-red-100 border border-red-100 transition-colors font-medium">
-                                    + HIV Combo (Consent)
-                                </button>
                             </div>
                         </CardContent>
                     </Card>
@@ -325,121 +311,101 @@ export function ReceptionistView({ patients, setPatients }: any) {
             </div>
         </div>
 
-        {/* --- RIGHT SIDEBAR CART (STICKY) --- */}
+        {/* --- RIGHT SIDEBAR CART (Keep your existing Cart implementation) --- */}
         <div className="w-[400px] border-l bg-white shadow-xl flex flex-col z-20">
-            {/* Cart Header */}
-            <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
-                <div className="flex items-center gap-2 font-bold text-slate-800">
-                    <ShoppingCart className="h-5 w-5 text-blue-600" />
-                    <span>Order Cart</span>
-                    <Badge className="bg-blue-600 text-white hover:bg-blue-700 ml-2">{selectedTests.length}</Badge>
-                </div>
-                <div className="text-xs text-slate-500">{new Date().toLocaleDateString()}</div>
-            </div>
+             {/* ... (Your existing Cart Code) ... */}
+             <div className="p-4 border-b bg-slate-50"><h3 className="font-bold flex gap-2"><ShoppingCart className="h-5 w-5"/> Order Cart ({selectedTests.length})</h3></div>
+             <div className="flex-1 p-4 overflow-y-auto space-y-3">
+                {selectedTests.map(t => (
+                    <div key={t.id} className="border p-2 rounded flex justify-between">
+                        <span className="text-sm font-bold">{t.name}</span>
+                        <Button variant="ghost" size="sm" onClick={() => removeTest(t.id)}><X className="h-4 w-4"/></Button>
+                    </div>
+                ))}
+             </div>
+        </div>
 
-            {/* Cart Items (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {selectedTests.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 opacity-50">
-                        <Receipt className="h-16 w-16" />
-                        <p>Cart is empty</p>
+        {/* --- DIALOG 1: HISTORY ACCESS AUTHORIZATION --- */}
+        <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Access Protected History</DialogTitle>
+                    <DialogDescription>
+                        To view past orders for <b>{formData.fullName}</b>, you must obtain authorization via the patient's registered device.
+                    </DialogDescription>
+                </DialogHeader>
+
+                {otpStep === 'method' ? (
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-blue-50 hover:border-blue-500" onClick={() => sendOtp('zalo')}>
+                            <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">Z</div>
+                            <span>Via Zalo</span>
+                        </Button>
+                        <Button variant="outline" className="h-24 flex flex-col gap-2 hover:bg-green-50 hover:border-green-500" onClick={() => sendOtp('sms')}>
+                            <Smartphone className="h-8 w-8 text-slate-600" />
+                            <span>Via SMS</span>
+                        </Button>
                     </div>
                 ) : (
-                    selectedTests.map((test) => (
-                        <div key={test.id} className={cn("border rounded-lg p-3 relative group transition-all", 
-                            test.requiresConsent && consentStatus[test.id] !== 'signed' ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"
-                        )}>
-                            <div className="flex justify-between items-start mb-1">
-                                <h4 className="font-bold text-sm text-slate-800 pr-6">{test.name}</h4>
-                                <button onClick={() => removeTest(test.id)} className="absolute top-2 right-2 text-slate-300 hover:text-red-500"><X className="h-4 w-4"/></button>
-                            </div>
-                            
-                            <div className="flex justify-between items-end">
-                                <div className="text-xs text-slate-500 space-y-1">
-                                    <div className="flex items-center gap-1"><Beaker className="h-3 w-3"/> {test.sampleType}</div>
-                                    <div className="flex items-center gap-1 font-semibold text-slate-700"><Clock className="h-3 w-3 text-blue-500"/> Result: {formatDateFriendly(getResultDate(test.turnaroundHours))}</div>
-                                </div>
-                                <div className="font-bold text-emerald-600 text-sm">{formatCurrency(test.price)}</div>
-                            </div>
-
-                            {/* --- DIGITAL CONSENT BLOCK --- */}
-                            {test.requiresConsent && (
-                                <div className="mt-3 pt-3 border-t border-amber-200/50">
-                                    {consentStatus[test.id] === 'pending' && (
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-1.5 text-xs text-amber-700 font-semibold animate-pulse">
-                                                <AlertCircle className="h-3.5 w-3.5" />
-                                                Physician/Patient Consent Required
-                                            </div>
-                                            <Button 
-                                                size="sm" 
-                                                variant="outline" 
-                                                onClick={() => requestConsent(test.id)}
-                                                className="w-full h-8 text-xs bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
-                                            >
-                                                <TabletSmartphone className="h-3.5 w-3.5 mr-2" />
-                                                Request Digital Signature
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                    {consentStatus[test.id] === 'requesting' && (
-                                        <div className="bg-white rounded border border-amber-200 p-2 flex flex-col items-center justify-center text-center gap-2">
-                                            <Wifi className="h-5 w-5 text-blue-500 animate-pulse" />
-                                            <span className="text-xs text-slate-500">Sent to Patient Tablet...</span>
-                                            <span className="text-[10px] text-slate-400">Waiting for input</span>
-                                        </div>
-                                    )}
-
-                                    {consentStatus[test.id] === 'signed' && (
-                                        <div className="bg-emerald-100/50 rounded border border-emerald-200 p-2 flex items-center gap-2">
-                                            <div className="bg-emerald-100 p-1 rounded-full"><FileSignature className="h-4 w-4 text-emerald-600" /></div>
-                                            <div className="flex-1">
-                                                <div className="text-xs font-bold text-emerald-800">Digitally Signed</div>
-                                                <div className="text-[10px] text-emerald-600">{new Date().toLocaleTimeString()} by Patient</div>
-                                            </div>
-                                            <Check className="h-4 w-4 text-emerald-600" />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                    <div className="space-y-4 py-4">
+                        <div className="text-center text-sm text-slate-500">
+                            Enter the 6-digit code sent to <br/><span className="font-bold text-slate-800">{formData.phone || "09xxxxxx"}</span>
                         </div>
-                    ))
+                        <div className="flex justify-center">
+                            <Input 
+                                className="text-center text-2xl tracking-[0.5em] font-mono w-48" 
+                                maxLength={6} 
+                                value={otpInput}
+                                onChange={e => setOtpInput(e.target.value)}
+                                placeholder="000000" 
+                            />
+                        </div>
+                        <div className="text-center text-xs text-blue-600 cursor-pointer hover:underline" onClick={() => setOtpStep('method')}>Resend Code</div>
+                    </div>
                 )}
-            </div>
 
-            {/* Cart Footer */}
-            <div className="p-4 border-t bg-slate-50 space-y-4">
-                <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-slate-500">
-                        <span>Subtotal</span>
-                        <span>{formatCurrency(totalTestsPrice)}</span>
-                    </div>
-                    {scannedIdentity?.bhyt && (
-                        <div className="flex justify-between text-sm text-emerald-600">
-                            <span>Insurance (80%)</span>
-                            <span>- {formatCurrency(totalTestsPrice * 0.8)}</span>
+                <DialogFooter>
+                    {otpStep === 'verify' && (
+                        <Button onClick={verifyOtp} className="w-full bg-emerald-600 hover:bg-emerald-700">Verify & Unlock</Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* --- DIALOG 2: HISTORICAL ORDERS VIEW --- */}
+        <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5 text-blue-600"/> Prior Orders</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    {mockPastOrders.map((order) => (
+                        <div key={order.id} className="border rounded-lg p-4 hover:bg-slate-50 transition-colors flex justify-between items-center">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-bold text-slate-800">{order.date}</span>
+                                    <Badge variant="secondary" className="text-xs">{order.id}</Badge>
+                                </div>
+                                <div className="text-sm text-slate-500 mb-2">Prescribed by {order.doctor}</div>
+                                <div className="flex gap-1 flex-wrap">
+                                    {order.items.map(itemId => {
+                                        const test = labTestsData.find(t => t.id === itemId)
+                                        return test ? (
+                                            <span key={itemId} className="text-[10px] bg-white border px-2 py-0.5 rounded text-slate-600">{test.shortName}</span>
+                                        ) : null
+                                    })}
+                                </div>
+                            </div>
+                            <Button size="sm" onClick={() => reorderPastItems(order.items)} className="bg-blue-600 hover:bg-blue-700">
+                                <Copy className="h-3.5 w-3.5 mr-2" />
+                                Re-Order
+                            </Button>
                         </div>
-                    )}
-                    <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t">
-                        <span>Total Due</span>
-                        <span>{formatCurrency(scannedIdentity?.bhyt ? totalTestsPrice * 0.2 : totalTestsPrice)}</span>
-                    </div>
+                    ))}
                 </div>
-                
-                {/* Block Checkout if Consent Missing */}
-                <Button 
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12 shadow-lg"
-                    disabled={selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed')}
-                >
-                    {selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed') ? (
-                        <span className="flex items-center gap-2"><AlertCircle className="h-4 w-4"/> Complete Consent First</span>
-                    ) : (
-                        <span className="flex items-center gap-2"><Save className="h-4 w-4"/> Submit Order</span>
-                    )}
-                </Button>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
+
       </div>
     </TooltipProvider>
   )

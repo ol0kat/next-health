@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { PhlebotomyRoomScreen } from "@/components/phlebotomy-room-screen"
 import { InsuranceCardManager } from "@/components/insurance-card-manager"
+import { AlertCircle } from "lucide-react"
 
 export default function PhlebotomyPage() {
   const [activeTab, setActiveTab] = useState<"vitals" | "insurance">("vitals")
@@ -10,20 +10,19 @@ export default function PhlebotomyPage() {
   // Demo patient data
   const demoPatientId = "patient_123"
   const demoPatientName = "Sarah Johnson"
-  const demoHeight = 165 // cm from previous visit
 
   return (
     <div className="w-full">
       {activeTab === "vitals" ? (
-        <PhlebotomyRoomScreen
-          patientId={demoPatientId}
-          patientName={demoPatientName}
-          previousHeightCm={demoHeight}
-          onVitalsSaved={(vitals) => {
-            console.log("Vitals saved:", vitals)
-            alert("Vitals recorded successfully!")
-          }}
-        />
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <div>
+              <h2 className="font-semibold text-yellow-900">Phlebotomy vitals module</h2>
+              <p className="text-sm text-yellow-700">This module is being refactored. Please use the Receptionist view for vital signs capture.</p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="p-6">
           <div className="mb-6">

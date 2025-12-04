@@ -7,7 +7,6 @@ import { useState } from "react"
 import { PatientHeader } from "./patient-header"
 import { Sidebar } from "./sidebar"
 import { LabResultsView } from "./lab-results-view"
-import { ImagingResultsView } from "./imaging-results-view"
 import { PrescriptionsView } from "./prescriptions-view"
 import { ClinicalNotesView } from "./clinical-notes-view"
 import { DocumentsView } from "./documents-view"
@@ -251,7 +250,7 @@ export function TelehealthDashboard() {
         {mainView === "agenda" && <AgendaView />}
         {mainView === "receptionist" && <ReceptionistView patients={patients} setPatients={setPatients} />}
         {mainView === "finance" && <FinanceView />}
-        {mainView === "imaging" && <ImagingResultsView />}
+        {mainView === "imaging" && <PlaceholderView title="Imaging Results" />}
         {mainView === "patients" && (
           <PatientListView patients={patients} onSelectPatient={() => setMainView("patient-detail")} />
         )}

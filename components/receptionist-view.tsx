@@ -18,7 +18,7 @@ import {
   PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
   Camera, Image as ImageIcon, Eye, AlertTriangle, 
   Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
-  Shield, UploadCloud, RefreshCw
+  Shield, UploadCloud, RefreshCw, Video, CalendarClock, Signal, Zap
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -58,9 +58,28 @@ const medicalIntents = [
     { id: "std_screening", label: "STD / Sexual Health", recommended: ["hiv", "syphilis"], visualPrompts: [{ id: "lesion", label: "Visible Lesions", icon: "skin" }] },
 ]
 
+// --- MOCK DOCTOR DATA ---
+interface Doctor {
+    id: string
+    name: string
+    specialty: string
+    status: 'online' | 'busy' | 'offline'
+    queueLength: number
+    nextAvailableSlot: string
+    avatarColor: string
+}
+
+const doctorPool: Doctor[] = [
+    { id: "dr1", name: "Dr. Vo Tuan", specialty: "Internal Medicine", status: "online", queueLength: 1, nextAvailableSlot: "Now", avatarColor: "bg-blue-100 text-blue-700" },
+    { id: "dr2", name: "Dr. Nguyen An", specialty: "Endocrinology", status: "online", queueLength: 0, nextAvailableSlot: "Now", avatarColor: "bg-emerald-100 text-emerald-700" },
+    { id: "dr3", name: "Dr. Le Chi", specialty: "Endocrinology", status: "busy", queueLength: 4, nextAvailableSlot: "14:30", avatarColor: "bg-purple-100 text-purple-700" },
+    { id: "dr4", name: "Dr. Tran Bao", specialty: "Infectious Disease", status: "online", queueLength: 2, nextAvailableSlot: "10:15", avatarColor: "bg-amber-100 text-amber-700" },
+    { id: "dr5", name: "Dr. Pham Hanh", specialty: "General Practice", status: "offline", queueLength: 0, nextAvailableSlot: "Tomorrow", avatarColor: "bg-slate-100 text-slate-700" },
+]
+
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-// --- IDENTITY CARD (Unchanged) ---
+// --- COMPONENT: IDENTITY CARD (Unchanged) ---
 function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryClick, internalAccess }: any) {
     if (scanStep === "idle" && !data.bhyt) return null
     const isComplete = scanStep === "complete"
@@ -127,171 +146,185 @@ function RelatedPartiesCard() {
     return ( <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white"><CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle><div className="flex gap-2"><Button size="sm" variant="outline" className="h-8 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button><Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan Relative ID</Button></div></CardHeader><CardContent className="p-0">{parties.length === 0 ? (<div className="p-8 text-center text-slate-400 text-sm italic">No related parties linked yet. Scan a family member's ID to link.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors"><div className="flex items-center gap-3 min-w-[200px]"><div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200")}>{party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}</div><div><div className="text-sm font-bold text-slate-800 flex items-center gap-2">{party.name}</div><div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">{party.relation} • {party.phone}</div></div></div><div className="flex flex-wrap gap-2 items-center"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><Siren className="h-3 w-3"/> Emergency Contact {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}</button><button onClick={() => toggleRole(party.id, 'isGuardian')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><FileSignature className="h-3 w-3"/> Legal Guardian</button><button onClick={() => toggleRole(party.id, 'isPayer')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><CreditCard className="h-3 w-3"/> Bill Payer</button><div className="h-4 w-px bg-slate-200 mx-1"></div><button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button></div></div>))}</div>)}</CardContent></Card> )
 }
 
-// --- NEW COMPONENT: PRIVATE INSURANCE CARD ---
-interface PrivateInsuranceData {
-    provider: string
-    policyNumber: string
-    frontImg: string | null
-    backImg: string | null
-    estimatedCoverage: number // 0 to 1
-    isActive: boolean
+// --- VISUAL OBSERVATION (Unchanged) ---
+function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
+    const { toast } = useToast()
+    const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
+    const intentData = medicalIntents.find(i => i.id === medicalIntent)
+    const prompts = intentData?.visualPrompts || []
+    if (!medicalIntent || prompts.length === 0) return null
+    const handleCapture = (promptId: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } })); toast({ title: "Image Captured", description: "Visual record added to session." }) }
+    const handleNote = (promptId: string, text: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } })) }
+    return (
+        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visual Observations</CardTitle><Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Protocol: {intentData?.label}</Badge></div></CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{prompts.map(prompt => { const data = capturedImages[prompt.id]; return (<div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>{data?.captured ? (<div className="space-y-3"><div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group"><ImageIcon className="h-8 w-8 text-white/50" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button></div><div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div></div><div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label><Input value={data.note} onChange={e => handleNote(prompt.id, e.target.value)} className="h-8 text-xs bg-slate-50" placeholder={`Describe ${prompt.label.toLowerCase()}...`} /></div></div>) : (<button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group"><div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">{prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}</div><div><div className="text-sm font-bold text-slate-700">{prompt.label}</div><div className="text-[10px] text-slate-400 flex items-center justify-center gap-1"><AlertTriangle className="h-3 w-3"/> Required for Protocol</div></div></button>)}</div>) })}</CardContent>
+        </Card>
+    )
 }
 
+// --- PRIVATE INSURANCE (Unchanged) ---
+interface PrivateInsuranceData { provider: string; policyNumber: string; frontImg: string | null; backImg: string | null; estimatedCoverage: number; isActive: boolean }
 function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuranceData) => void, data: PrivateInsuranceData }) {
     const { toast } = useToast()
     const [isScanning, setIsScanning] = useState(false)
+    const providers = [{ id: "pvi", name: "PVI Insurance", color: "bg-yellow-600" }, { id: "baoviet", name: "Bao Viet Insurance", color: "bg-blue-600" }, { id: "manulife", name: "Manulife", color: "bg-emerald-600" }, { id: "liberty", name: "Liberty Insurance", color: "bg-indigo-600" }]
+    const handleScanCard = () => { setIsScanning(true); setTimeout(() => { setIsScanning(false); onChange({ ...data, isActive: true, provider: "baoviet", policyNumber: "BV-88992200-X", frontImg: "captured", backImg: "captured", estimatedCoverage: 0.8 }); toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) }, 2000) }
+    const toggleActive = () => { if (!data.isActive) { onChange({ ...data, isActive: true }) } else { onChange({ ...data, isActive: false }) } }
+    return ( <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}><CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between"><CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}><Shield className="h-4 w-4"/> Private Insurance (Optional)</CardTitle><div className="flex items-center gap-2">{data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>} <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-8 text-xs" onClick={toggleActive}>{data.isActive ? "Remove" : "Add Insurance"}</Button></div></CardHeader>{data.isActive && (<CardContent className="p-5 animate-in slide-in-from-top-2"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="space-y-4"><Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label><div className="grid grid-cols-2 gap-3"><button onClick={handleScanCard} className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span></button><button className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50", data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300")}>{data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}<span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span></button></div>{data.frontImg ? (<div className="text-[10px] text-sky-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center</div>) : (<Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}><ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)</Button>)}</div><div className="space-y-4"><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Provider</Label><Select value={data.provider} onValueChange={(val) => onChange({...data, provider: val})}><SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger><SelectContent>{providers.map(p => (<SelectItem key={p.id} value={p.id}><div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", p.color)}></div>{p.name}</div></SelectItem>))}</SelectContent></Select></div><div className="space-y-1"><Label className="text-xs font-semibold text-slate-500">Policy Number</Label><Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Enter or Scan..." className="font-mono bg-white"/></div><div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100"><div className="flex justify-between items-center mb-2"><Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><RefreshCw className="h-3 w-3"/> Est. Direct Billing</Label><span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span></div><Slider defaultValue={[data.estimatedCoverage]} max={1} step={0.05} onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})} className="py-2"/><div className="text-[9px] text-slate-400 mt-1 italic">*Estimate only. Final coverage pending TPA approval.</div></div></div></div></CardContent>)}</Card>)
+}
 
-    // Mock Providers
-    const providers = [
-        { id: "pvi", name: "PVI Insurance", color: "bg-yellow-600" },
-        { id: "baoviet", name: "Bao Viet Insurance", color: "bg-blue-600" },
-        { id: "manulife", name: "Manulife", color: "bg-emerald-600" },
-        { id: "liberty", name: "Liberty Insurance", color: "bg-indigo-600" },
-    ]
+// --- NEW COMPONENT: TELEHEALTH DISPATCH CARD ---
+function TelehealthDispatchCard({ medicalIntent }: { medicalIntent: string }) {
+    const { toast } = useToast()
+    const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
+    const [bookingState, setBookingState] = useState<'idle' | 'booking' | 'booked'>('idle')
+    const [searchQuery, setSearchQuery] = useState("")
 
-    const handleScanCard = () => {
-        setIsScanning(true)
-        setTimeout(() => {
-            setIsScanning(false)
-            // Mock OCR Result
-            onChange({
-                ...data,
-                isActive: true,
-                provider: "baoviet",
-                policyNumber: "BV-88992200-X",
-                frontImg: "captured", // Mock flag
-                backImg: "captured",
-                estimatedCoverage: 0.8 // OCR suggests 80% coverage based on card type "Gold"
-            })
-            toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." })
-        }, 2000)
-    }
-
-    const toggleActive = () => {
-        if (!data.isActive) {
-            // Reset to default empty state if turning on manually
-            onChange({ ...data, isActive: true })
-        } else {
-            onChange({ ...data, isActive: false })
+    // 1. FILTERING LOGIC: Best Match
+    const filteredDoctors = useMemo(() => {
+        let docs = [...doctorPool]
+        
+        // Filter by relevance (Basic logic for demo)
+        if (medicalIntent === 'chronic_diabetes') {
+            docs = docs.filter(d => d.specialty === 'Endocrinology' || d.specialty === 'Internal Medicine')
+        } else if (medicalIntent === 'fever_infection') {
+            docs = docs.filter(d => d.specialty === 'Infectious Disease' || d.specialty === 'General Practice')
         }
+        
+        // Filter by Search
+        if (searchQuery) {
+            docs = docs.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        }
+
+        // Sort: Online > Low Queue > Busy > Offline
+        return docs.sort((a, b) => {
+             const statusScore = (s:string) => s === 'online' ? 0 : s === 'busy' ? 1 : 2
+             if (statusScore(a.status) !== statusScore(b.status)) return statusScore(a.status) - statusScore(b.status)
+             return a.queueLength - b.queueLength
+        })
+    }, [medicalIntent, searchQuery])
+
+    // 2. AUTO-ASSIGN LOGIC (Best available doctor)
+    const autoAssignedDr = useMemo(() => {
+        return filteredDoctors.find(d => d.status === 'online') || filteredDoctors[0]
+    }, [filteredDoctors])
+
+    // Select auto-assigned doctor initially
+    useEffect(() => {
+        if(autoAssignedDr && !selectedDoctor && bookingState === 'idle') {
+            setSelectedDoctor(autoAssignedDr.id)
+        }
+    }, [autoAssignedDr, bookingState])
+
+    const handleBook = () => {
+        if(!selectedDoctor) return
+        setBookingState('booking')
+        setTimeout(() => {
+            setBookingState('booked')
+            const dr = doctorPool.find(d => d.id === selectedDoctor)
+            toast({ 
+                title: "Telehealth Confirmed", 
+                description: `Appointment booked with ${dr?.name}. Link sent to patient.`
+            })
+        }, 1500)
     }
+
+    if (!medicalIntent) return null
 
     return (
-        <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}>
-            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-                <CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}>
-                    <Shield className="h-4 w-4"/> Private Insurance (Optional)
+        <Card className="border-t-4 border-t-pink-500 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2">
+                    <Video className="h-4 w-4"/> Telehealth Dispatch
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                    {data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>}
-                    <Button 
-                        size="sm" 
-                        variant={data.isActive ? "secondary" : "outline"}
-                        className="h-8 text-xs"
-                        onClick={toggleActive}
-                    >
-                        {data.isActive ? "Remove" : "Add Insurance"}
-                    </Button>
+                <div className="flex gap-2">
+                    <Input 
+                        placeholder="Search doctors..." 
+                        className="h-8 w-40 text-xs" 
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </CardHeader>
-            
-            {data.isActive && (
-                <CardContent className="p-5 animate-in slide-in-from-top-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        {/* LEFT: CARD CAPTURE */}
-                        <div className="space-y-4">
-                            <Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {/* FRONT */}
-                                <button 
-                                    onClick={handleScanCard}
-                                    className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50",
-                                        data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300"
-                                    )}
-                                >
-                                    {isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : 
-                                     data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : 
-                                     <Camera className="h-6 w-6 text-slate-400"/>
-                                    }
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span>
-                                </button>
-                                
-                                {/* BACK */}
-                                <button 
-                                    className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50",
-                                        data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300"
-                                    )}
-                                >
-                                    {data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span>
-                                </button>
-                            </div>
-                            {data.frontImg ? (
-                                <div className="text-[10px] text-sky-600 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center
-                                </div>
-                            ) : (
-                                <Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}>
-                                    <ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)
-                                </Button>
-                            )}
+            <CardContent className="p-0">
+                {bookingState === 'booked' ? (
+                    <div className="p-8 text-center space-y-3 bg-pink-50/50">
+                        <div className="mx-auto h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <CheckCircle2 className="h-6 w-6 text-green-600"/>
                         </div>
-
-                        {/* RIGHT: DETAILS & OVERRIDE */}
-                        <div className="space-y-4">
-                            <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-slate-500">Provider</Label>
-                                <Select 
-                                    value={data.provider} 
-                                    onValueChange={(val) => onChange({...data, provider: val})}
-                                >
-                                    <SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger>
-                                    <SelectContent>
-                                        {providers.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                <div className="flex items-center gap-2">
-                                                    <div className={cn("h-2 w-2 rounded-full", p.color)}></div>
-                                                    {p.name}
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <Label className="text-xs font-semibold text-slate-500">Policy Number</Label>
-                                <Input 
-                                    value={data.policyNumber} 
-                                    onChange={(e) => onChange({...data, policyNumber: e.target.value})}
-                                    placeholder="Enter or Scan..." 
-                                    className="font-mono bg-white"
-                                />
-                            </div>
-
-                            {/* COVERAGE SLIDER */}
-                            <div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100">
-                                <div className="flex justify-between items-center mb-2">
-                                    <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                                        <RefreshCw className="h-3 w-3"/> Est. Direct Billing
-                                    </Label>
-                                    <span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
-                                </div>
-                                <Slider 
-                                    defaultValue={[data.estimatedCoverage]} 
-                                    max={1} step={0.05} 
-                                    onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})}
-                                    className="py-2"
-                                />
-                                <div className="text-[9px] text-slate-400 mt-1 italic">
-                                    *Estimate only. Final coverage pending TPA approval.
-                                </div>
-                            </div>
-                        </div>
+                        <div className="text-pink-900 font-bold">Booking Confirmed</div>
+                        <p className="text-xs text-slate-500">
+                             Video link has been SMS'd to the patient.<br/>
+                             Expected start: <b>{doctorPool.find(d => d.id === selectedDoctor)?.nextAvailableSlot}</b>
+                        </p>
+                        <Button variant="outline" size="sm" onClick={() => setBookingState('idle')}>Book Another</Button>
                     </div>
-                </CardContent>
-            )}
+                ) : (
+                    <>
+                         {/* DOCTOR LIST */}
+                         <div className="max-h-[200px] overflow-y-auto divide-y divide-slate-50">
+                             {filteredDoctors.map(dr => {
+                                 const isSelected = selectedDoctor === dr.id
+                                 const isBestMatch = dr.id === autoAssignedDr?.id
+                                 return (
+                                     <div 
+                                        key={dr.id}
+                                        onClick={() => setSelectedDoctor(dr.id)}
+                                        className={cn("p-3 flex items-center justify-between cursor-pointer transition-colors border-l-4", 
+                                            isSelected ? "bg-pink-50 border-l-pink-500" : "hover:bg-slate-50 border-l-transparent"
+                                        )}
+                                     >
+                                         <div className="flex items-center gap-3">
+                                             <div className={cn("h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs relative", dr.avatarColor)}>
+                                                 {dr.name.split(" ").pop()?.substring(0,2)}
+                                                 {/* Status Dot */}
+                                                 <div className={cn("absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white", 
+                                                    dr.status === 'online' ? "bg-green-500" : dr.status === 'busy' ? "bg-amber-500" : "bg-slate-300"
+                                                 )}></div>
+                                             </div>
+                                             <div>
+                                                 <div className="flex items-center gap-2">
+                                                     <span className="text-sm font-bold text-slate-700">{dr.name}</span>
+                                                     {isBestMatch && <Badge className="h-4 px-1 text-[9px] bg-pink-100 text-pink-700 hover:bg-pink-100 border-pink-200">Auto-Suggest</Badge>}
+                                                 </div>
+                                                 <div className="text-xs text-slate-500">{dr.specialty}</div>
+                                             </div>
+                                         </div>
+
+                                         <div className="text-right">
+                                             <div className="text-xs font-medium text-slate-600">
+                                                 {dr.status === 'online' ? <span className="text-green-600 flex items-center gap-1"><Signal className="h-3 w-3"/> Available</span> : 
+                                                  dr.status === 'busy' ? <span className="text-amber-600 flex items-center gap-1"><Clock className="h-3 w-3"/> In Call</span> : 
+                                                  <span className="text-slate-400">Offline</span>}
+                                             </div>
+                                             <div className="text-[10px] text-slate-400">
+                                                 Queue: {dr.queueLength} • Next: {dr.nextAvailableSlot}
+                                             </div>
+                                         </div>
+                                     </div>
+                                 )
+                             })}
+                         </div>
+
+                         {/* ACTION FOOTER */}
+                         <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                             <div className="text-xs text-slate-500">
+                                 Selected: <span className="font-bold text-slate-700">{doctorPool.find(d => d.id === selectedDoctor)?.name || "None"}</span>
+                             </div>
+                             <Button 
+                                size="sm" 
+                                className="bg-pink-600 hover:bg-pink-700 text-white"
+                                onClick={handleBook}
+                                disabled={!selectedDoctor || bookingState === 'booking'}
+                             >
+                                 {bookingState === 'booking' ? <Loader2 className="h-4 w-4 animate-spin"/> : <Zap className="h-4 w-4 mr-2"/>}
+                                 Book Telehealth
+                             </Button>
+                         </div>
+                    </>
+                )}
+            </CardContent>
         </Card>
     )
 }
@@ -299,8 +332,6 @@ function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuran
 // --- MAIN PAGE ---
 export function ReceptionistView() {
   const { toast } = useToast()
-  
-  // States
   const [scanStep, setScanStep] = useState<any>("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
   const [formData, setFormData] = useState<any>({ fullName: "", dob: "", citizenId: "", gender: "male", medicalIntent: "" })
@@ -313,16 +344,13 @@ export function ReceptionistView() {
   const [otpStep, setOtpStep] = useState<'method' | 'verify'>('method')
   const [otpInput, setOtpInput] = useState("")
 
-  // NEW: PRIVATE INSURANCE STATE
   const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({
       provider: "", policyNumber: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false
   })
 
-  // LOGIC: INSURANCE CALCULATOR (UPDATED)
+  // LOGIC & CALCULATIONS
   const checkInsuranceEligibility = (test: LabTest, patient: any) => {
-      // 1. Check BHYT
       let bhytResult = { isCovered: false, coveragePercent: 0, reason: "" }
-      
       if(patient && patient.bhyt) {
           if (test.linkedCondition && patient.chronicConditionCode === test.linkedCondition) {
               if (test.id === 'hba1c') {
@@ -333,40 +361,22 @@ export function ReceptionistView() {
               bhytResult = { isCovered: true, coveragePercent: 0.8, reason: "Standard BHYT" }
           }
       }
-
       return bhytResult
   }
 
-  // UPDATED CART TOTALS LOGIC
   const cartTotals = useMemo(() => {
-      let subtotal = 0
-      let bhytCoverageAmount = 0
-      let patientResponsibility = 0
-      let privateCoverageAmount = 0
-      let finalPatientDue = 0
-
+      let subtotal = 0, bhytCoverageAmount = 0, privateCoverageAmount = 0, finalPatientDue = 0
       selectedTests.forEach(test => {
           subtotal += test.price
-          
-          // 1. Calculate BHYT
           const bhytCheck = checkInsuranceEligibility(test, scannedIdentity)
           const bhytAmt = bhytCheck.isCovered ? test.price * bhytCheck.coveragePercent : 0
           bhytCoverageAmount += bhytAmt
-          
-          // 2. Remaining Balance
           const remainder = test.price - bhytAmt
-          
-          // 3. Calculate Private Insurance (on Remainder)
           let privateAmt = 0
-          if (privateInsurance.isActive && remainder > 0) {
-              privateAmt = remainder * privateInsurance.estimatedCoverage
-          }
+          if (privateInsurance.isActive && remainder > 0) privateAmt = remainder * privateInsurance.estimatedCoverage
           privateCoverageAmount += privateAmt
-
-          // 4. Final Due
           finalPatientDue += (remainder - privateAmt)
       })
-
       return { subtotal, bhytCoverageAmount, privateCoverageAmount, finalPatientDue }
   }, [selectedTests, scannedIdentity, privateInsurance])
 
@@ -390,12 +400,7 @@ export function ReceptionistView() {
   const removeTest = (id: string) => { setSelectedTests(prev => prev.filter(t => t.id !== id)); const n = {...consentStatus}; delete n[id]; setConsentStatus(n) }
   const requestConsent = (testId: string) => { setConsentStatus(prev => ({ ...prev, [testId]: 'requesting' })); setTimeout(() => { setConsentStatus(prev => ({ ...prev, [testId]: 'signed' })) }, 2000) }
   const verifyOtp = () => { if(otpInput === "123456") { setInternalAccess('unlocked'); setShowAuthDialog(false); setShowInternalHistoryModal(true) } }
-
-  const suggestedTests = useMemo(() => {
-      if (!formData.medicalIntent) return []
-      const intentObj = medicalIntents.find(i => i.id === formData.medicalIntent)
-      return intentObj ? intentObj.recommended.map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[] : []
-  }, [formData.medicalIntent])
+  const suggestedTests = useMemo(() => { if (!formData.medicalIntent) return []; const intentObj = medicalIntents.find(i => i.id === formData.medicalIntent); return intentObj ? intentObj.recommended.map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[] : [] }, [formData.medicalIntent])
 
   return (
     <TooltipProvider>
@@ -421,74 +426,21 @@ export function ReceptionistView() {
                     internalAccess={internalAccess}
                 />
 
-                {/* --- NEW: PRIVATE INSURANCE CARD --- */}
-                {/* Placed here as requested for better flow */}
-                <PrivateInsuranceCard 
-                    data={privateInsurance}
-                    onChange={setPrivateInsurance}
-                />
+                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Demographics */}
-                    <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Demographics</CardTitle></CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4">
-                            <div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div>
-                            <div>
-                                <Label className="text-xs text-slate-500">Citizen ID</Label>
-                                <div className="flex gap-2"><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/><Button onClick={() => processIdentityVerification({})} disabled={scanStep !== 'idle'} variant="secondary">Check</Button></div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Demographics</CardTitle></CardHeader><CardContent className="grid grid-cols-2 gap-4"><div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div><div><Label className="text-xs text-slate-500">Citizen ID</Label><div className="flex gap-2"><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/><Button onClick={() => processIdentityVerification({})} disabled={scanStep !== 'idle'} variant="secondary">Check</Button></div></div></CardContent></Card>
+                    <div className="md:col-span-2"><RelatedPartiesCard /></div>
+                    <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4"/> Clinical Context</CardTitle></CardHeader><CardContent className="space-y-4"><div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100"><Label className="text-sm font-bold text-emerald-800 mb-2 block flex items-center gap-2"><Activity className="h-4 w-4"/> Medical Intent</Label><Select value={formData.medicalIntent} onValueChange={(val) => setFormData({...formData, medicalIntent: val})}><SelectTrigger className="bg-white border-emerald-200"><SelectValue placeholder="Select intent..." /></SelectTrigger><SelectContent>{medicalIntents.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent></Select></div>{formData.medicalIntent === 'chronic_diabetes' && scannedIdentity?.activeReferral && (<div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r shadow-sm"><div className="flex items-start gap-3"><div className="bg-blue-100 p-2 rounded-full"><Sparkles className="h-5 w-5 text-blue-600" /></div><div><h4 className="font-bold text-blue-900 text-sm mb-1">Suggested Script</h4><p className="text-sm text-blue-800 italic">"Mr./Ms. {formData.fullName.split(' ').pop()}, evidently you have already been classified as a diabetic, and you have no diabetes testing in the last 90 days. We can serve you a diabetes test today which you don't have to make a charge for under BHYT Insurance."</p></div></div></div>)}</CardContent></Card>
+                    <div className="md:col-span-2"><VitalSignsMonitor nurseName="Nurse Lan" patientAge={scannedIdentity?.age} historicalHeight={scannedIdentity?.historicalHeight} /></div>
+                    <div className="md:col-span-2"><VisualObservationCard medicalIntent={formData.medicalIntent} /></div>
 
-                    {/* Related Parties */}
+                    {/* --- NEW: TELEHEALTH DISPATCHER --- */}
                     <div className="md:col-span-2">
-                        <RelatedPartiesCard />
+                        <TelehealthDispatchCard medicalIntent={formData.medicalIntent} />
                     </div>
 
-                    {/* Clinical Intake */}
-                    <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4"/> Clinical Context</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
-                                <Label className="text-sm font-bold text-emerald-800 mb-2 block flex items-center gap-2"><Activity className="h-4 w-4"/> Medical Intent</Label>
-                                <Select value={formData.medicalIntent} onValueChange={(val) => setFormData({...formData, medicalIntent: val})}>
-                                    <SelectTrigger className="bg-white border-emerald-200"><SelectValue placeholder="Select intent..." /></SelectTrigger>
-                                    <SelectContent>{medicalIntents.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                            {formData.medicalIntent === 'chronic_diabetes' && scannedIdentity?.activeReferral && (
-                                <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r shadow-sm">
-                                    <div className="flex items-start gap-3"><div className="bg-blue-100 p-2 rounded-full"><Sparkles className="h-5 w-5 text-blue-600" /></div><div><h4 className="font-bold text-blue-900 text-sm mb-1">Suggested Script</h4><p className="text-sm text-blue-800 italic">"Mr./Ms. {formData.fullName.split(' ').pop()}, evidently you have already been classified as a diabetic, and you have no diabetes testing in the last 90 days. We can serve you a diabetes test today which you don't have to make a charge for under BHYT Insurance."</p></div></div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-
-
-                    {/* Lab Search Area */}
-                    <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            {suggestedTests.length > 0 && (
-                                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                                    <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4"/> Recommended Protocol</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                        {suggestedTests.map(test => {
-                                            const eligible = checkInsuranceEligibility(test, scannedIdentity)
-                                            return (
-                                                <button key={test.id} onClick={() => addTest(test)} className="text-left p-2 rounded border bg-white border-indigo-200 hover:border-indigo-400 flex justify-between items-center group">
-                                                    <div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div><PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                            <div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-10 h-10" placeholder="Search tests..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)}/></div>
-                        </CardContent>
-                    </Card>
+                    <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20"><CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader><CardContent className="space-y-4">{suggestedTests.length > 0 && (<div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4"><h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4"/> Recommended Protocol</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-2">{suggestedTests.map(test => { const eligible = checkInsuranceEligibility(test, scannedIdentity); return (<button key={test.id} onClick={() => addTest(test)} className="text-left p-2 rounded border bg-white border-indigo-200 hover:border-indigo-400 flex justify-between items-center group"><div><div className="text-xs font-bold text-slate-700">{test.name}</div><div className="text-[10px] text-slate-500">{eligible.coveragePercent === 1.0 ? <span className="text-emerald-600 font-bold">100% Covered</span> : formatCurrency(test.price)}</div></div><PlusCircle className="h-4 w-4 text-indigo-400 group-hover:text-indigo-600"/></button>)})}</div></div>)}<div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><Input className="pl-10 h-10" placeholder="Search tests..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)}/></div></CardContent></Card>
                 </div>
             </div>
         </div>
@@ -511,20 +463,11 @@ export function ReceptionistView() {
                     })
                 )}
             </div>
-            {/* UPDATED CART FOOTER WITH PRIVATE INSURANCE LOGIC */}
             <div className="p-4 border-t bg-slate-50 space-y-4">
                 <div className="space-y-2">
                     <div className="flex justify-between text-sm text-slate-500"><span>Subtotal</span><span>{formatCurrency(cartTotals.subtotal)}</span></div>
                     {scannedIdentity?.bhyt && (<div className="flex justify-between text-sm text-emerald-600"><span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3"/> BHYT Pays</span><span>- {formatCurrency(cartTotals.bhytCoverageAmount)}</span></div>)}
-                    
-                    {/* NEW: Private Insurance Line Item */}
-                    {privateInsurance.isActive && cartTotals.privateCoverageAmount > 0 && (
-                        <div className="flex justify-between text-sm text-sky-600">
-                            <span className="flex items-center gap-1"><Shield className="h-3 w-3"/> Private Ins. (~{(privateInsurance.estimatedCoverage*100).toFixed(0)}%)</span>
-                            <span>- {formatCurrency(cartTotals.privateCoverageAmount)}</span>
-                        </div>
-                    )}
-                    
+                    {privateInsurance.isActive && cartTotals.privateCoverageAmount > 0 && (<div className="flex justify-between text-sm text-sky-600"><span className="flex items-center gap-1"><Shield className="h-3 w-3"/> Private Ins. (~{(privateInsurance.estimatedCoverage*100).toFixed(0)}%)</span><span>- {formatCurrency(cartTotals.privateCoverageAmount)}</span></div>)}
                     <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t"><span>Final Patient Due</span><span>{formatCurrency(cartTotals.finalPatientDue)}</span></div>
                 </div>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12 shadow-lg" disabled={selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed')}><Save className="h-4 w-4 mr-2"/> Submit Order</Button>

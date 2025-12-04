@@ -120,6 +120,29 @@ const doctorPool: Doctor[] = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
+
+// Calculate suggested tests based on ALL selected intents
+const suggestedTests = useMemo(() => { 
+    if (formData.selectedIntents.length === 0) return []; 
+    
+    // Use Set to avoid duplicate tests if multiple intents recommend the same one (e.g. CBC)
+    const allTestIds = new Set<string>()
+    
+    formData.selectedIntents.forEach((id: string) => {
+        const intentObj = medicalIntents.find(i => i.id === id)
+        if(intentObj) {
+            intentObj.recommended.forEach(tId => allTestIds.add(tId))
+        }
+    })
+
+    // Map IDs back to full Test Objects
+    return Array.from(allTestIds)
+        .map(id => labTestsData.find(t => t.id === id))
+        .filter(Boolean) as LabTest[] 
+}, [formData.selectedIntents])
+
+
+
 // --- 1. IDENTITY CARD (Dual Flow) ---
 function IdentityVerificationCard({ 
     admissionType, 
@@ -499,6 +522,41 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                     <div className="md:col-span-2"><VisualObservationCard medicalIntents={formData.selectedIntents} /></div>
 
                     {/* 9. Order Entry (Fixed Search UI) */}
+                    {suggestedTests.length > 0 && (
+    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4 animate-in fade-in slide-in-from-top-2">
+        <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-indigo-600"/> Recommended Protocol
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {suggestedTests.map(test => { 
+                const eligible = checkInsuranceEligibility(test, scannedIdentity); 
+                return (
+                    <button 
+                        key={test.id} 
+                        onClick={() => addTest(test)} 
+                        className="text-left p-2.5 rounded-lg border bg-white border-indigo-200 hover:border-indigo-400 hover:shadow-md transition-all flex justify-between items-center group"
+                    >
+                        <div>
+                            <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">
+                                {test.name}
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                                {eligible.coveragePercent === 1.0 ? (
+                                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                                        <ShieldCheck className="h-3 w-3"/> 100% Covered
+                                    </span>
+                                ) : (
+                                    formatCurrency(test.price)
+                                )}
+                            </div>
+                        </div>
+                        <PlusCircle className="h-5 w-5 text-indigo-300 group-hover:text-indigo-600 transition-colors"/>
+                    </button>
+                )
+            })}
+        </div>
+    </div>
+)}
                     <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4"/> Order Entry</CardTitle></CardHeader>
                         <CardContent className="space-y-4">

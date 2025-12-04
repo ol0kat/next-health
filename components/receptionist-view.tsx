@@ -111,7 +111,7 @@ function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryCl
     )
 }
 
-// --- NEW COMPONENT: VITAL SIGNS MONITOR ---
+// --- REWORKED COMPONENT: VITAL SIGNS MONITOR ---
 function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patientAge: number | null, historicalHeight: string, nurseName: string }) {
     const { toast } = useToast()
     
@@ -146,9 +146,7 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
         setVitals(prev => ({ ...prev, [field]: value }))
     }
 
-    // THE SAVE ACTION
     const saveVitals = () => {
-        // Validation: Need at least one vital sign
         const hasData = Object.values(vitals).some(val => val !== "")
         if (!hasData) return
 
@@ -161,9 +159,8 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
         }
 
         setVitalHistory(prev => [newRecord, ...prev])
-        toast({ title: "Vitals Recorded", description: `Captured by ${nurseName} at ${newRecord.timestamp.toLocaleTimeString()}` })
+        toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` })
         
-        // Reset inputs (Keep height if locked)
         setVitals(prev => ({ 
             ...prev, 
             weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "",
@@ -173,137 +170,173 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
-            e.preventDefault() // prevent form submission if wrapped
+            e.preventDefault() 
             saveVitals()
         }
     }
 
+    // Helper for input with unit suffix
+    const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
+        <div className="relative">
+            <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
+            <div className="relative">
+                <Input 
+                    value={value} 
+                    onChange={e => onChange(e.target.value)} 
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} 
+                />
+                <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
+            </div>
+        </div>
+    )
+
     return (
-        <Card className="border-t-4 border-t-red-500 shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2">
+        <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide">
                     <Activity className="h-4 w-4"/> Vital Signs
-                </CardTitle>
-                <div className="text-xs text-slate-400">Press <span className="font-bold border px-1 rounded bg-slate-100">Enter</span> to save</div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                
-                {/* INPUT GRID */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50/50 rounded-lg border border-slate-100" onKeyDown={handleKeyDown}>
+                </div>
+                <div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">
+                    Press <span className="font-bold text-slate-700">Enter</span> to save
+                </div>
+            </div>
+
+            <CardContent className="p-0">
+                {/* INPUT AREA: CLEAN GRID WITH DIVIDERS */}
+                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={handleKeyDown}>
                     
-                    {/* COL 1: Anthropometrics */}
-                    <div className="space-y-3">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1"><Scale className="h-3 w-3"/> Anthropometrics</Label>
-                        <div className="flex gap-2 items-end">
-                            <div className="relative flex-1">
-                                <Label className="text-[10px] text-slate-400 absolute -top-3 left-0">Height (cm)</Label>
-                                <Input 
-                                    value={vitals.height} 
-                                    onChange={e => handleInputChange('height', e.target.value)}
-                                    disabled={isHeightLocked}
-                                    className={cn("h-9 bg-white", isHeightLocked && "bg-slate-100 text-slate-500")}
-                                />
-                                {isHeightLocked && (
-                                    <button onClick={() => setIsHeightLocked(false)} className="absolute right-2 top-2.5 text-slate-400 hover:text-blue-600">
-                                        <Edit2 className="h-3 w-3"/>
-                                    </button>
-                                )}
-                            </div>
-                            <div className="relative flex-1">
-                                <Label className="text-[10px] text-slate-400 absolute -top-3 left-0">Weight (kg)</Label>
-                                <Input 
-                                    value={vitals.weight} 
-                                    onChange={e => handleInputChange('weight', e.target.value)}
-                                    className="h-9 bg-white font-bold"
-                                    autoFocus // Start here usually
-                                />
-                            </div>
+                    {/* SECTION 1: ANTHRO */}
+                    <div className="p-5 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                             <Scale className="h-4 w-4 text-slate-400"/>
+                             <span className="text-xs font-bold text-slate-700 uppercase">Body</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className="text-slate-500">BMI:</span>
-                            <span className={cn("font-bold px-2 py-0.5 rounded", 
-                                !bmi ? "bg-slate-100" : Number(bmi) > 25 ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
-                            )}>
+                        <div className="grid grid-cols-2 gap-3">
+                            <UnitInput 
+                                label="Height" unit="cm" placeholder="--"
+                                value={vitals.height} 
+                                onChange={(v: string) => handleInputChange('height', v)}
+                                disabled={isHeightLocked}
+                                className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""}
+                            />
+                            <UnitInput 
+                                label="Weight" unit="kg" placeholder="--"
+                                value={vitals.weight} 
+                                onChange={(v: string) => handleInputChange('weight', v)}
+                                className="font-bold text-slate-900"
+                            />
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span>
+                            <span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>
                                 {bmi || "--"}
                             </span>
                         </div>
                     </div>
 
-                    {/* COL 2: Circulation */}
-                    <div className="space-y-3">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1"><HeartPulse className="h-3 w-3"/> Circulation</Label>
-                        <div className="flex items-end gap-1">
-                            <div className="relative w-16">
-                                <Label className="text-[10px] text-slate-400 absolute -top-3">Sys</Label>
-                                <Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 bg-white text-center" placeholder="120" />
-                            </div>
-                            <span className="text-slate-300 text-xl">/</span>
-                            <div className="relative w-16">
-                                <Label className="text-[10px] text-slate-400 absolute -top-3">Dia</Label>
-                                <Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 bg-white text-center" placeholder="80" />
-                            </div>
-                            <span className="text-xs text-slate-400 ml-1">mmHg</span>
+                    {/* SECTION 2: CIRCULATION */}
+                    <div className="p-5 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                             <HeartPulse className="h-4 w-4 text-slate-400"/>
+                             <span className="text-xs font-bold text-slate-700 uppercase">Circulation</span>
                         </div>
-                        <div className="relative w-24">
-                            <Label className="text-[10px] text-slate-400 absolute -top-3">Pulse (bpm)</Label>
-                            <Input value={vitals.pulse} onChange={e => handleInputChange('pulse', e.target.value)} className="h-9 bg-white" placeholder="72" />
+                        <div className="space-y-3">
+                            <div>
+                                <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label>
+                                <div className="flex items-center gap-1">
+                                    <Input 
+                                        value={vitals.bpSys} 
+                                        onChange={e => handleInputChange('bpSys', e.target.value)} 
+                                        className="h-9 w-16 text-center font-medium placeholder:text-slate-200" 
+                                        placeholder="120"
+                                    />
+                                    <span className="text-slate-300">/</span>
+                                    <Input 
+                                        value={vitals.bpDia} 
+                                        onChange={e => handleInputChange('bpDia', e.target.value)} 
+                                        className="h-9 w-16 text-center font-medium placeholder:text-slate-200" 
+                                        placeholder="80"
+                                    />
+                                    <span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span>
+                                </div>
+                            </div>
+                            <UnitInput 
+                                label="Pulse Rate" unit="bpm" placeholder="--"
+                                value={vitals.pulse} 
+                                onChange={(v: string) => handleInputChange('pulse', v)}
+                            />
                         </div>
                     </div>
 
-                    {/* COL 3: Respiration & O2 */}
-                    <div className="space-y-3">
-                        <Label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1"><Wind className="h-3 w-3"/> Respiratory</Label>
-                        <div className="relative w-full">
-                            <Label className="text-[10px] text-slate-400 absolute -top-3">SpO2 (%)</Label>
-                            <Input value={vitals.spo2} onChange={e => handleInputChange('spo2', e.target.value)} className="h-9 bg-white text-blue-600 font-bold" placeholder="98" />
+                    {/* SECTION 3: RESPIRATORY */}
+                    <div className="p-5 space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                             <Wind className="h-4 w-4 text-slate-400"/>
+                             <span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span>
                         </div>
-                        <div className="relative w-full mt-5">
-                            <Label className="text-[10px] text-slate-400 absolute -top-3">Breathing (rpm)</Label>
-                            <Input value={vitals.resp} onChange={e => handleInputChange('resp', e.target.value)} className="h-9 bg-white" placeholder="16" />
+                        <div className="space-y-3">
+                            <UnitInput 
+                                label="SpO2" unit="%" placeholder="98"
+                                value={vitals.spo2} 
+                                onChange={(v: string) => handleInputChange('spo2', v)}
+                                className="text-blue-600 font-bold"
+                            />
+                            <UnitInput 
+                                label="Breathing Rate" unit="rpm" placeholder="16"
+                                value={vitals.resp} 
+                                onChange={(v: string) => handleInputChange('resp', v)}
+                            />
                         </div>
                     </div>
 
-                    {/* COL 4: Temp & Actions */}
-                    <div className="space-y-3 flex flex-col justify-between">
-                         <div>
-                            <Label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1"><Thermometer className="h-3 w-3"/> Temp</Label>
-                            <div className="relative w-full mt-2">
-                                <Label className="text-[10px] text-slate-400 absolute -top-3">Celcius (°C)</Label>
-                                <Input value={vitals.temp} onChange={e => handleInputChange('temp', e.target.value)} className="h-9 bg-white" placeholder="36.5" />
+                    {/* SECTION 4: TEMP & ACTION */}
+                    <div className="p-5 flex flex-col justify-between bg-slate-50/30">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Thermometer className="h-4 w-4 text-slate-400"/>
+                                <span className="text-xs font-bold text-slate-700 uppercase">Temp</span>
                             </div>
-                         </div>
-                         <Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-xs h-8">
-                             Record Entry
-                         </Button>
+                            <UnitInput 
+                                label="Celcius" unit="°C" placeholder="36.5"
+                                value={vitals.temp} 
+                                onChange={(v: string) => handleInputChange('temp', v)}
+                            />
+                        </div>
+                        <Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">
+                            Record Entry
+                        </Button>
                     </div>
                 </div>
 
                 {/* LOG HISTORY */}
                 {vitalHistory.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2">
+                    <div className="border-t border-slate-100">
                         <Table>
-                            <TableHeader className="bg-slate-50">
-                                <TableRow>
-                                    <TableHead className="h-8 text-[10px] uppercase">Time / Nurse</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase text-right">BP</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase text-right">HR</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase text-right">SpO2</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase text-right">Temp</TableHead>
-                                    <TableHead className="h-8 text-[10px] uppercase text-right">BMI</TableHead>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent border-none">
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead>
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead>
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead>
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead>
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead>
+                                    <TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {vitalHistory.map(record => (
-                                    <TableRow key={record.id} className="h-8">
-                                        <TableCell className="py-1">
+                                    <TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50">
+                                        <TableCell className="pl-6 py-2">
                                             <div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                                            <div className="text-[9px] text-slate-400">{record.recordedBy}</div>
+                                            <div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div>
                                         </TableCell>
-                                        <TableCell className="text-right py-1 text-xs">{record.bpSys}/{record.bpDia}</TableCell>
-                                        <TableCell className="text-right py-1 text-xs">{record.pulse}</TableCell>
-                                        <TableCell className="text-right py-1 text-xs text-blue-600 font-bold">{record.spo2}%</TableCell>
-                                        <TableCell className="text-right py-1 text-xs">{record.temp}°</TableCell>
-                                        <TableCell className="text-right py-1 text-xs">{record.bmi}</TableCell>
+                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell>
+                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell>
+                                        <TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell>
+                                        <TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell>
+                                        <TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

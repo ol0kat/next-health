@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
 import {
   User, QrCode, Search, Loader2, X, CheckCircle2,
   Clock, History, Lock, Unlock, ShieldCheck, 
@@ -16,7 +17,8 @@ import {
   FileSignature, Sparkles, Stethoscope, 
   PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
   Camera, Image as ImageIcon, Eye, AlertTriangle, 
-  Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren
+  Users, Star, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
+  Shield, UploadCloud, RefreshCw
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -39,7 +41,7 @@ import {
 // --- TYPES ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
-// --- MOCK DATA (Unchanged) ---
+// --- MOCK DATA ---
 const labTestsData: LabTest[] = [
   { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies" }, 
   { id: "cbc", name: "Complete Blood Count", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, popular: true, description: "Overall health, anemia, infection" },
@@ -106,202 +108,190 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "" })
     const [isHeightLocked, setIsHeightLocked] = useState(false)
     const [vitalHistory, setVitalHistory] = useState<any[]>([])
-
-    useEffect(() => {
-        if (patientAge && patientAge >= 18 && historicalHeight) { setVitals(prev => ({ ...prev, height: historicalHeight })); setIsHeightLocked(true) }
-        else { setIsHeightLocked(false) }
-    }, [patientAge, historicalHeight])
-
+    useEffect(() => { if (patientAge && patientAge >= 18 && historicalHeight) { setVitals(prev => ({ ...prev, height: historicalHeight })); setIsHeightLocked(true) } else { setIsHeightLocked(false) } }, [patientAge, historicalHeight])
     const bmi = useMemo(() => { const h = parseFloat(vitals.height)/100; const w = parseFloat(vitals.weight); return (h>0 && w>0) ? (w/(h*h)).toFixed(1) : "" }, [vitals.height, vitals.weight])
     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
-    const saveVitals = () => {
-        if (!Object.values(vitals).some(val => val !== "")) return
-        setVitalHistory(prev => [{id: Math.random(), timestamp: new Date(), recordedBy: nurseName, bmi: bmi, ...vitals}, ...prev])
-        toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` })
-        setVitals(prev => ({ ...prev, weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "", height: isHeightLocked ? prev.height : "" }))
-    }
-    const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
-        <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div>
-    )
-    return (
-        <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div>
-            <CardContent className="p-0">
-                <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={e => e.key === 'Enter' && saveVitals()}>
-                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div><div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div><div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div></div>
-                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div><div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div></div>
-                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div><div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div></div>
-                    <div className="p-5 flex flex-col justify-between bg-slate-50/30"><div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button></div>
-                </div>
-                {vitalHistory.length > 0 && (<div className="border-t border-slate-100"><Table><TableHeader><TableRow className="hover:bg-transparent border-none"><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead></TableRow></TableHeader><TableBody>{vitalHistory.map((record:any) => (<TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50"><TableCell className="pl-6 py-2"><div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div></TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell><TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell><TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell></TableRow>))}</TableBody></Table></div>)}
-            </CardContent>
-        </Card>
-    )
+    const saveVitals = () => { if (!Object.values(vitals).some(val => val !== "")) return; setVitalHistory(prev => [{id: Math.random(), timestamp: new Date(), recordedBy: nurseName, bmi: bmi, ...vitals}, ...prev]); toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals(prev => ({ ...prev, weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "", height: isHeightLocked ? prev.height : "" })) }
+    const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => ( <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div> )
+    return ( <Card className="border-t-4 border-t-red-500 shadow-sm bg-white overflow-hidden"><div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div><CardContent className="p-0"><div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={e => e.key === 'Enter' && saveVitals()}><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div><div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div><div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div></div><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div><div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div></div><div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div><div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div></div><div className="p-5 flex flex-col justify-between bg-slate-50/30"><div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button></div></div>{vitalHistory.length > 0 && (<div className="border-t border-slate-100"><Table><TableHeader><TableRow className="hover:bg-transparent border-none"><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead></TableRow></TableHeader><TableBody>{vitalHistory.map((record:any) => (<TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50"><TableCell className="pl-6 py-2"><div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div></TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell><TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell><TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell></TableRow>))}</TableBody></Table></div>)}</CardContent></Card> )
 }
 
-// --- VISUAL OBSERVATION (Unchanged) ---
-function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
-    const { toast } = useToast()
-    const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
-    const intentData = medicalIntents.find(i => i.id === medicalIntent)
-    const prompts = intentData?.visualPrompts || []
-    if (!medicalIntent || prompts.length === 0) return null
-    const handleCapture = (promptId: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } })); toast({ title: "Image Captured", description: "Visual record added to session." }) }
-    const handleNote = (promptId: string, text: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } })) }
-    return (
-        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visual Observations</CardTitle><Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Protocol: {intentData?.label}</Badge></div></CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{prompts.map(prompt => { const data = capturedImages[prompt.id]; return (<div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>{data?.captured ? (<div className="space-y-3"><div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group"><ImageIcon className="h-8 w-8 text-white/50" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button></div><div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div></div><div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label><Input value={data.note} onChange={e => handleNote(prompt.id, e.target.value)} className="h-8 text-xs bg-slate-50" placeholder={`Describe ${prompt.label.toLowerCase()}...`} /></div></div>) : (<button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group"><div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">{prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}</div><div><div className="text-sm font-bold text-slate-700">{prompt.label}</div><div className="text-[10px] text-slate-400 flex items-center justify-center gap-1"><AlertTriangle className="h-3 w-3"/> Required for Protocol</div></div></button>)}</div>) })}</CardContent>
-        </Card>
-    )
-}
-
-// --- NEW COMPONENT: RELATED PARTIES & RELATIONSHIP MATRIX ---
-interface RelatedParty {
-    id: string
-    name: string
-    relation: string
-    phone: string
-    citizenId?: string // Link key
-    roles: {
-        isEmergency: boolean
-        isGuardian: boolean
-        isPayer: boolean
-    }
-}
-
+// --- RELATED PARTIES (Unchanged) ---
 function RelatedPartiesCard() {
     const { toast } = useToast()
-    const [parties, setParties] = useState<RelatedParty[]>([])
+    const [parties, setParties] = useState<any[]>([])
     const [scanRelativeStep, setScanRelativeStep] = useState<"idle" | "scanning">("idle")
-
-    // Mock Scanning Logic
-    const handleScanRelative = () => {
-        setScanRelativeStep("scanning")
-        setTimeout(() => {
-            setScanRelativeStep("idle")
-            
-            // Simulation: If list is empty, add "Wife". If not, add "Daughter"
-            const isFirst = parties.length === 0
-            const newPerson: RelatedParty = isFirst 
-                ? { 
-                    id: "rel-01", name: "NGUYỄN THỊ MAI (Wife)", relation: "spouse", phone: "0909111222", citizenId: "0791...",
-                    roles: { isEmergency: true, isGuardian: false, isPayer: true } // Wife defaults to Payer/EC
-                  }
-                : {
-                    id: "rel-02", name: "TRẦN MAI ANH (Daughter)", relation: "child", phone: "N/A", citizenId: "0792...",
-                    roles: { isEmergency: false, isGuardian: false, isPayer: false } // Child defaults to nothing
-                  }
-
-            setParties(prev => [...prev, newPerson])
-            toast({ title: "Identity Linked", description: `Added ${newPerson.name} to related parties.` })
-        }, 1500)
-    }
-
-    const toggleRole = (id: string, role: keyof RelatedParty['roles']) => {
-        setParties(prev => prev.map(p => {
-            if (p.id !== id) return p
-            return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } }
-        }))
-    }
-
+    const handleScanRelative = () => { setScanRelativeStep("scanning"); setTimeout(() => { setScanRelativeStep("idle"); const isFirst = parties.length === 0; const newPerson = isFirst ? { id: "rel-01", name: "NGUYỄN THỊ MAI (Wife)", relation: "spouse", phone: "0909111222", citizenId: "0791...", roles: { isEmergency: true, isGuardian: false, isPayer: true } } : { id: "rel-02", name: "TRẦN MAI ANH (Daughter)", relation: "child", phone: "N/A", citizenId: "0792...", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; setParties(prev => [...prev, newPerson]); toast({ title: "Identity Linked", description: `Added ${newPerson.name} to related parties.` }) }, 1500) }
+    const toggleRole = (id: string, role: string) => { setParties(prev => prev.map(p => { if (p.id !== id) return p; return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } } })) }
     const removeParty = (id: string) => setParties(prev => prev.filter(p => p.id !== id))
+    return ( <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white"><CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between"><CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle><div className="flex gap-2"><Button size="sm" variant="outline" className="h-8 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button><Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan Relative ID</Button></div></CardHeader><CardContent className="p-0">{parties.length === 0 ? (<div className="p-8 text-center text-slate-400 text-sm italic">No related parties linked yet. Scan a family member's ID to link.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors"><div className="flex items-center gap-3 min-w-[200px]"><div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200")}>{party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}</div><div><div className="text-sm font-bold text-slate-800 flex items-center gap-2">{party.name}</div><div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">{party.relation} • {party.phone}</div></div></div><div className="flex flex-wrap gap-2 items-center"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><Siren className="h-3 w-3"/> Emergency Contact {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}</button><button onClick={() => toggleRole(party.id, 'isGuardian')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><FileSignature className="h-3 w-3"/> Legal Guardian</button><button onClick={() => toggleRole(party.id, 'isPayer')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all", party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300")}><CreditCard className="h-3 w-3"/> Bill Payer</button><div className="h-4 w-px bg-slate-200 mx-1"></div><button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button></div></div>))}</div>)}</CardContent></Card> )
+}
+
+// --- NEW COMPONENT: PRIVATE INSURANCE CARD ---
+interface PrivateInsuranceData {
+    provider: string
+    policyNumber: string
+    frontImg: string | null
+    backImg: string | null
+    estimatedCoverage: number // 0 to 1
+    isActive: boolean
+}
+
+function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuranceData) => void, data: PrivateInsuranceData }) {
+    const { toast } = useToast()
+    const [isScanning, setIsScanning] = useState(false)
+
+    // Mock Providers
+    const providers = [
+        { id: "pvi", name: "PVI Insurance", color: "bg-yellow-600" },
+        { id: "baoviet", name: "Bao Viet Insurance", color: "bg-blue-600" },
+        { id: "manulife", name: "Manulife", color: "bg-emerald-600" },
+        { id: "liberty", name: "Liberty Insurance", color: "bg-indigo-600" },
+    ]
+
+    const handleScanCard = () => {
+        setIsScanning(true)
+        setTimeout(() => {
+            setIsScanning(false)
+            // Mock OCR Result
+            onChange({
+                ...data,
+                isActive: true,
+                provider: "baoviet",
+                policyNumber: "BV-88992200-X",
+                frontImg: "captured", // Mock flag
+                backImg: "captured",
+                estimatedCoverage: 0.8 // OCR suggests 80% coverage based on card type "Gold"
+            })
+            toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." })
+        }, 2000)
+    }
+
+    const toggleActive = () => {
+        if (!data.isActive) {
+            // Reset to default empty state if turning on manually
+            onChange({ ...data, isActive: true })
+        } else {
+            onChange({ ...data, isActive: false })
+        }
+    }
 
     return (
-        <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white">
-            <CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2">
-                    <Users className="h-4 w-4"/> Related Parties & Emergency
+        <Card className={cn("border-t-4 shadow-sm transition-all", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}>
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+                <CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}>
+                    <Shield className="h-4 w-4"/> Private Insurance (Optional)
                 </CardTitle>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="h-8 text-xs gap-2">
-                         <Plus className="h-3 w-3"/> Manual
-                    </Button>
+                <div className="flex items-center gap-2">
+                    {data.isActive && <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Verifying...</Badge>}
                     <Button 
                         size="sm" 
-                        onClick={handleScanRelative} 
-                        disabled={scanRelativeStep === 'scanning'}
-                        className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs gap-2"
+                        variant={data.isActive ? "secondary" : "outline"}
+                        className="h-8 text-xs"
+                        onClick={toggleActive}
                     >
-                         {scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>}
-                         Scan Relative ID
+                        {data.isActive ? "Remove" : "Add Insurance"}
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent className="p-0">
-                {parties.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 text-sm italic">
-                        No related parties linked yet. Scan a family member's ID to link.
-                    </div>
-                ) : (
-                    <div className="divide-y divide-slate-100">
-                        {parties.map(party => (
-                            <div key={party.id} className="p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:bg-slate-50 transition-colors">
-                                {/* Profile Info */}
-                                <div className="flex items-center gap-3 min-w-[200px]">
-                                    <div className={cn("h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border-2", 
-                                        party.relation === 'child' ? "bg-purple-100 text-purple-600 border-purple-200" : "bg-blue-100 text-blue-600 border-blue-200"
-                                    )}>
-                                        {party.relation === 'child' ? <Baby className="h-5 w-5"/> : party.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                            {party.name}
-                                        </div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-semibold flex items-center gap-2">
-                                            {party.relation} • {party.phone}
-                                        </div>
-                                    </div>
+            
+            {data.isActive && (
+                <CardContent className="p-5 animate-in slide-in-from-top-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* LEFT: CARD CAPTURE */}
+                        <div className="space-y-4">
+                            <Label className="text-xs font-bold text-slate-500 uppercase">Physical Card Capture</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {/* FRONT */}
+                                <button 
+                                    onClick={handleScanCard}
+                                    className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50",
+                                        data.frontImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300"
+                                    )}
+                                >
+                                    {isScanning ? <Loader2 className="h-6 w-6 animate-spin text-sky-500"/> : 
+                                     data.frontImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : 
+                                     <Camera className="h-6 w-6 text-slate-400"/>
+                                    }
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Front Side</span>
+                                </button>
+                                
+                                {/* BACK */}
+                                <button 
+                                    className={cn("aspect-[1.58/1] rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all hover:bg-sky-50",
+                                        data.backImg ? "border-sky-500 bg-sky-50/50" : "border-slate-300"
+                                    )}
+                                >
+                                    {data.backImg ? <CheckCircle2 className="h-6 w-6 text-sky-500"/> : <Camera className="h-6 w-6 text-slate-400"/>}
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Back Side</span>
+                                </button>
+                            </div>
+                            {data.frontImg ? (
+                                <div className="text-[10px] text-sky-600 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3"/> Images uploaded to Claims Center
                                 </div>
+                            ) : (
+                                <Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white" onClick={handleScanCard}>
+                                    <ScanLine className="h-4 w-4 mr-2"/> Scan Card (OCR)
+                                </Button>
+                            )}
+                        </div>
 
-                                {/* Role Toggles (The "Chips") */}
-                                <div className="flex flex-wrap gap-2 items-center">
-                                    {/* Emergency Toggle */}
-                                    <button 
-                                        onClick={() => toggleRole(party.id, 'isEmergency')}
-                                        className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
-                                            party.roles.isEmergency ? "bg-red-50 border-red-200 text-red-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
-                                        )}
-                                    >
-                                        <Siren className="h-3 w-3"/> Emergency Contact
-                                        {party.roles.isEmergency && <CheckCircle2 className="h-3 w-3 ml-1"/>}
-                                    </button>
+                        {/* RIGHT: DETAILS & OVERRIDE */}
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-slate-500">Provider</Label>
+                                <Select 
+                                    value={data.provider} 
+                                    onValueChange={(val) => onChange({...data, provider: val})}
+                                >
+                                    <SelectTrigger className="bg-white"><SelectValue placeholder="Select Provider" /></SelectTrigger>
+                                    <SelectContent>
+                                        {providers.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={cn("h-2 w-2 rounded-full", p.color)}></div>
+                                                    {p.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                                    {/* Guardian Toggle */}
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <button 
-                                                    onClick={() => toggleRole(party.id, 'isGuardian')}
-                                                    className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
-                                                        party.roles.isGuardian ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
-                                                    )}
-                                                >
-                                                    <FileSignature className="h-3 w-3"/> Legal Guardian
-                                                </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p>Authorized to sign consent forms</p></TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                            <div className="space-y-1">
+                                <Label className="text-xs font-semibold text-slate-500">Policy Number</Label>
+                                <Input 
+                                    value={data.policyNumber} 
+                                    onChange={(e) => onChange({...data, policyNumber: e.target.value})}
+                                    placeholder="Enter or Scan..." 
+                                    className="font-mono bg-white"
+                                />
+                            </div>
 
-                                    {/* Payer Toggle */}
-                                    <button 
-                                        onClick={() => toggleRole(party.id, 'isPayer')}
-                                        className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 transition-all",
-                                            party.roles.isPayer ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
-                                        )}
-                                    >
-                                        <CreditCard className="h-3 w-3"/> Bill Payer
-                                    </button>
-
-                                    <div className="h-4 w-px bg-slate-200 mx-1"></div>
-                                    <button onClick={() => removeParty(party.id)} className="text-slate-300 hover:text-red-500"><Trash2 className="h-4 w-4"/></button>
+                            {/* COVERAGE SLIDER */}
+                            <div className="pt-2 bg-slate-50 p-3 rounded border border-slate-100">
+                                <div className="flex justify-between items-center mb-2">
+                                    <Label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                                        <RefreshCw className="h-3 w-3"/> Est. Direct Billing
+                                    </Label>
+                                    <span className="text-sm font-bold text-sky-600">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
+                                </div>
+                                <Slider 
+                                    defaultValue={[data.estimatedCoverage]} 
+                                    max={1} step={0.05} 
+                                    onValueChange={(vals) => onChange({...data, estimatedCoverage: vals[0]})}
+                                    className="py-2"
+                                />
+                                <div className="text-[9px] text-slate-400 mt-1 italic">
+                                    *Estimate only. Final coverage pending TPA approval.
                                 </div>
                             </div>
-                        ))}
+                        </div>
                     </div>
-                )}
-            </CardContent>
+                </CardContent>
+            )}
         </Card>
     )
 }
@@ -323,30 +313,62 @@ export function ReceptionistView() {
   const [otpStep, setOtpStep] = useState<'method' | 'verify'>('method')
   const [otpInput, setOtpInput] = useState("")
 
+  // NEW: PRIVATE INSURANCE STATE
+  const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({
+      provider: "", policyNumber: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false
+  })
+
+  // LOGIC: INSURANCE CALCULATOR (UPDATED)
   const checkInsuranceEligibility = (test: LabTest, patient: any) => {
-      if(!patient || !patient.bhyt) return { isCovered: false, reason: "No Insurance" }
-      if (test.linkedCondition && patient.chronicConditionCode === test.linkedCondition) {
-          if (test.id === 'hba1c') {
-             if (patient.activeReferral) return { isCovered: true, coveragePercent: 1.0, reason: "Diabetes Plan (90 days elapsed)" }
-             else return { isCovered: false, reason: "Missing Referral" }
+      // 1. Check BHYT
+      let bhytResult = { isCovered: false, coveragePercent: 0, reason: "" }
+      
+      if(patient && patient.bhyt) {
+          if (test.linkedCondition && patient.chronicConditionCode === test.linkedCondition) {
+              if (test.id === 'hba1c') {
+                  if (patient.activeReferral) bhytResult = { isCovered: true, coveragePercent: 1.0, reason: "Diabetes Plan (BHYT)" }
+                  else bhytResult = { isCovered: false, coveragePercent: 0, reason: "BHYT (Missing Referral)" }
+              }
+          } else {
+              bhytResult = { isCovered: true, coveragePercent: 0.8, reason: "Standard BHYT" }
           }
       }
-      return { isCovered: true, coveragePercent: 0.8, reason: "Standard BHYT" }
+
+      return bhytResult
   }
 
+  // UPDATED CART TOTALS LOGIC
   const cartTotals = useMemo(() => {
-      let subtotal = 0, insuranceCoverage = 0, patientDue = 0
+      let subtotal = 0
+      let bhytCoverageAmount = 0
+      let patientResponsibility = 0
+      let privateCoverageAmount = 0
+      let finalPatientDue = 0
+
       selectedTests.forEach(test => {
           subtotal += test.price
-          const eligibility = checkInsuranceEligibility(test, scannedIdentity)
-          if (eligibility.isCovered) {
-              const coveredAmount = test.price * (eligibility.coveragePercent || 0)
-              insuranceCoverage += coveredAmount
-              patientDue += (test.price - coveredAmount)
-          } else { patientDue += test.price }
+          
+          // 1. Calculate BHYT
+          const bhytCheck = checkInsuranceEligibility(test, scannedIdentity)
+          const bhytAmt = bhytCheck.isCovered ? test.price * bhytCheck.coveragePercent : 0
+          bhytCoverageAmount += bhytAmt
+          
+          // 2. Remaining Balance
+          const remainder = test.price - bhytAmt
+          
+          // 3. Calculate Private Insurance (on Remainder)
+          let privateAmt = 0
+          if (privateInsurance.isActive && remainder > 0) {
+              privateAmt = remainder * privateInsurance.estimatedCoverage
+          }
+          privateCoverageAmount += privateAmt
+
+          // 4. Final Due
+          finalPatientDue += (remainder - privateAmt)
       })
-      return { subtotal, insuranceCoverage, patientDue }
-  }, [selectedTests, scannedIdentity])
+
+      return { subtotal, bhytCoverageAmount, privateCoverageAmount, finalPatientDue }
+  }, [selectedTests, scannedIdentity, privateInsurance])
 
   const processIdentityVerification = (sourceData: any) => {
       setScanStep("cccd")
@@ -399,6 +421,13 @@ export function ReceptionistView() {
                     internalAccess={internalAccess}
                 />
 
+                {/* --- NEW: PRIVATE INSURANCE CARD --- */}
+                {/* Placed here as requested for better flow */}
+                <PrivateInsuranceCard 
+                    data={privateInsurance}
+                    onChange={setPrivateInsurance}
+                />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Demographics */}
                     <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
@@ -412,7 +441,7 @@ export function ReceptionistView() {
                         </CardContent>
                     </Card>
 
-                    {/* --- REPLACED: NEW RELATED PARTIES MATRIX --- */}
+                    {/* Related Parties */}
                     <div className="md:col-span-2">
                         <RelatedPartiesCard />
                     </div>
@@ -490,11 +519,21 @@ export function ReceptionistView() {
                     })
                 )}
             </div>
+            {/* UPDATED CART FOOTER WITH PRIVATE INSURANCE LOGIC */}
             <div className="p-4 border-t bg-slate-50 space-y-4">
                 <div className="space-y-2">
                     <div className="flex justify-between text-sm text-slate-500"><span>Subtotal</span><span>{formatCurrency(cartTotals.subtotal)}</span></div>
-                    {scannedIdentity?.bhyt && (<div className="flex justify-between text-sm text-emerald-600"><span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3"/> Insurance Pays</span><span>- {formatCurrency(cartTotals.insuranceCoverage)}</span></div>)}
-                    <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t"><span>Patient Due</span><span>{formatCurrency(cartTotals.patientDue)}</span></div>
+                    {scannedIdentity?.bhyt && (<div className="flex justify-between text-sm text-emerald-600"><span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3"/> BHYT Pays</span><span>- {formatCurrency(cartTotals.bhytCoverageAmount)}</span></div>)}
+                    
+                    {/* NEW: Private Insurance Line Item */}
+                    {privateInsurance.isActive && cartTotals.privateCoverageAmount > 0 && (
+                        <div className="flex justify-between text-sm text-sky-600">
+                            <span className="flex items-center gap-1"><Shield className="h-3 w-3"/> Private Ins. (~{(privateInsurance.estimatedCoverage*100).toFixed(0)}%)</span>
+                            <span>- {formatCurrency(cartTotals.privateCoverageAmount)}</span>
+                        </div>
+                    )}
+                    
+                    <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t"><span>Final Patient Due</span><span>{formatCurrency(cartTotals.finalPatientDue)}</span></div>
                 </div>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-lg h-12 shadow-lg" disabled={selectedTests.some(t => t.requiresConsent && consentStatus[t.id] !== 'signed')}><Save className="h-4 w-4 mr-2"/> Submit Order</Button>
             </div>

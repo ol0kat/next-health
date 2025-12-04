@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client"
 
 interface Order {
   id: string
+  order_number?: string
   patient_id: string
   patient_name?: string
   status: string
@@ -91,7 +92,8 @@ export default function OrdersPage() {
     (order) =>
       order.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.tests_ordered?.toLowerCase().includes(searchQuery.toLowerCase())
+      order.tests_ordered?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.order_number?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const formatCurrency = (amount: number) =>
@@ -170,7 +172,7 @@ export default function OrdersPage() {
                       return (
                         <TableRow key={order.id} className="hover:bg-slate-50">
                           <TableCell className="font-mono text-sm font-bold text-blue-600">
-                            {order.id.substring(0, 8)}...
+                            {order.order_number || order.id.substring(0, 8) + "..."}
                           </TableCell>
                           <TableCell className="font-medium">
                             {order.patient_name}

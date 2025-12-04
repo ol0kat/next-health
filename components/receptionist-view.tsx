@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   User, QrCode, Search, Loader2, X, CheckCircle2,
   Clock, History, Lock, Unlock, ShieldCheck, 
-  ShoppingCart, Copy, FileText, Activity, Save, Beaker, 
+  ShoppingCart, FileText, Activity, Save, Beaker, 
   FileSignature, Sparkles, Stethoscope, 
-  PlusCircle, Video, Edit2, Thermometer, Wind, HeartPulse, Scale,
-  Camera, Image as ImageIcon, Eye, AlertTriangle, Upload
+  PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
+  Camera, Image as ImageIcon, Eye, AlertTriangle, 
+  Users, Star, Trash2, Phone, Plus
 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
@@ -38,6 +39,7 @@ import {
 // --- TYPES & DATA MODELS ---
 interface LabTest { id: string, name: string, price: number, category: string, sampleType: string, turnaroundHours: number, requiresConsent?: boolean, popular?: boolean, description?: string, linkedCondition?: string, frequencyDays?: number }
 
+// ... (Existing Lab Data & Intents remain unchanged) ...
 const labTestsData: LabTest[] = [
   { id: "hiv", name: "HIV Ab/Ag Combo", price: 200000, category: "Serology", sampleType: "Serum", turnaroundHours: 4, requiresConsent: true, description: "Screening for HIV 1/2 antibodies & p24 antigen" }, 
   { id: "cbc", name: "Complete Blood Count", price: 120000, category: "Hematology", sampleType: "Whole Blood", turnaroundHours: 4, popular: true, description: "Overall health, anemia, infection" },
@@ -47,46 +49,16 @@ const labTestsData: LabTest[] = [
   { id: "dengue", name: "Dengue NS1", price: 250000, category: "Serology", sampleType: "Serum", turnaroundHours: 2, description: "Acute Dengue Fever" },
 ]
 
-// Updated Intents with Visual Prompts
 const medicalIntents = [
-    { 
-        id: "general_checkup", 
-        label: "General Health Checkup", 
-        recommended: ["cbc", "lipid", "hba1c"],
-        visualPrompts: [] // None mandatory
-    },
-    { 
-        id: "chronic_diabetes", 
-        label: "Diabetes Monitoring", 
-        recommended: ["hba1c", "lipid"],
-        visualPrompts: [
-            { id: "foot_exam", label: "Foot/Ulcer Exam", icon: "foot" }, 
-            { id: "injection_site", label: "Injection Sites", icon: "skin" }
-        ]
-    },
-    { 
-        id: "fever_infection", 
-        label: "Fever & Infection", 
-        recommended: ["cbc", "dengue"],
-        visualPrompts: [
-            { id: "skin_rash", label: "Skin Rash / Petechiae", icon: "skin" },
-            { id: "eye_exam", label: "Bloodshot Eyes / Sclera", icon: "eye" },
-            { id: "throat", label: "Throat / Tonsils", icon: "mouth" }
-        ]
-    },
-    { 
-        id: "std_screening", 
-        label: "STD / Sexual Health", 
-        recommended: ["hiv", "syphilis"],
-        visualPrompts: [
-            { id: "lesion", label: "Visible Lesions", icon: "skin" }
-        ]
-    },
+    { id: "general_checkup", label: "General Health Checkup", recommended: ["cbc", "lipid", "hba1c"], visualPrompts: [] },
+    { id: "chronic_diabetes", label: "Diabetes Monitoring", recommended: ["hba1c", "lipid"], visualPrompts: [{ id: "foot_exam", label: "Foot/Ulcer Exam", icon: "foot" }, { id: "injection_site", label: "Injection Sites", icon: "skin" }] },
+    { id: "fever_infection", label: "Fever & Infection", recommended: ["cbc", "dengue"], visualPrompts: [{ id: "skin_rash", label: "Skin Rash / Petechiae", icon: "skin" }, { id: "eye_exam", label: "Bloodshot Eyes / Sclera", icon: "eye" }, { id: "throat", label: "Throat / Tonsils", icon: "mouth" }] },
+    { id: "std_screening", label: "STD / Sexual Health", recommended: ["hiv", "syphilis"], visualPrompts: [{ id: "lesion", label: "Visible Lesions", icon: "skin" }] },
 ]
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
 
-// --- COMPONENT: IDENTITY CARD (Kept same) ---
+// --- IDENTITY CARD (Unchanged) ---
 function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryClick, internalAccess }: any) {
     if (scanStep === "idle" && !data.bhyt) return null
     const isComplete = scanStep === "complete"
@@ -128,7 +100,7 @@ function IdentityVerificationCard({ data, scanStep, onClear, onInternalHistoryCl
     )
 }
 
-// --- VITAL SIGNS MONITOR (Cleaned Version) ---
+// --- VITAL SIGNS MONITOR (Unchanged) ---
 function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patientAge: number | null, historicalHeight: string, nurseName: string }) {
     const { toast } = useToast()
     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "" })
@@ -142,14 +114,12 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
 
     const bmi = useMemo(() => { const h = parseFloat(vitals.height)/100; const w = parseFloat(vitals.weight); return (h>0 && w>0) ? (w/(h*h)).toFixed(1) : "" }, [vitals.height, vitals.weight])
     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
-    
     const saveVitals = () => {
         if (!Object.values(vitals).some(val => val !== "")) return
         setVitalHistory(prev => [{id: Math.random(), timestamp: new Date(), recordedBy: nurseName, bmi: bmi, ...vitals}, ...prev])
         toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` })
         setVitals(prev => ({ ...prev, weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "", resp: "", height: isHeightLocked ? prev.height : "" }))
     }
-
     const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
         <div className="relative"><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label><div className="relative"><Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} /><span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span></div></div>
     )
@@ -159,22 +129,10 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><div className="flex items-center gap-2 text-red-600 font-bold text-sm uppercase tracking-wide"><Activity className="h-4 w-4"/> Vital Signs</div><div className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded">Press <span className="font-bold text-slate-700">Enter</span> to save</div></div>
             <CardContent className="p-0">
                 <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100" onKeyDown={e => e.key === 'Enter' && saveVitals()}>
-                    <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div>
-                        <div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div>
-                        <div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div>
-                    </div>
-                    <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div>
-                        <div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div>
-                    </div>
-                    <div className="p-5 space-y-4">
-                        <div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div>
-                        <div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div>
-                    </div>
-                    <div className="p-5 flex flex-col justify-between bg-slate-50/30">
-                        <div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button>
-                    </div>
+                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Scale className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Body</span></div><div className="grid grid-cols-2 gap-3"><UnitInput label="Height" unit="cm" placeholder="--" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} disabled={isHeightLocked} className={isHeightLocked ? "bg-slate-50 text-slate-600" : ""} /><UnitInput label="Weight" unit="kg" placeholder="--" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} className="font-bold text-slate-900"/></div><div className="flex justify-between items-center bg-slate-50 rounded px-3 py-1.5 border border-slate-100"><span className="text-[10px] font-bold text-slate-500 uppercase">BMI Score</span><span className={cn("text-xs font-bold", !bmi ? "text-slate-300" : Number(bmi) > 25 ? "text-red-600" : "text-emerald-600")}>{bmi || "--"}</span></div></div>
+                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><HeartPulse className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Circulation</span></div><div className="space-y-3"><div><Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">Blood Pressure</Label><div className="flex items-center gap-1"><Input value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="120"/><span className="text-slate-300">/</span><Input value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} className="h-9 w-16 text-center font-medium placeholder:text-slate-200" placeholder="80"/><span className="text-[10px] text-slate-400 ml-1 font-bold">mmHg</span></div></div><UnitInput label="Pulse Rate" unit="bpm" placeholder="--" value={vitals.pulse} onChange={(v: string) => handleInputChange('pulse', v)} /></div></div>
+                    <div className="p-5 space-y-4"><div className="flex items-center gap-2 mb-2"><Wind className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Respiratory</span></div><div className="space-y-3"><UnitInput label="SpO2" unit="%" placeholder="98" value={vitals.spo2} onChange={(v: string) => handleInputChange('spo2', v)} className="text-blue-600 font-bold"/><UnitInput label="Breathing Rate" unit="rpm" placeholder="16" value={vitals.resp} onChange={(v: string) => handleInputChange('resp', v)} /></div></div>
+                    <div className="p-5 flex flex-col justify-between bg-slate-50/30"><div className="space-y-4"><div className="flex items-center gap-2 mb-2"><Thermometer className="h-4 w-4 text-slate-400"/><span className="text-xs font-bold text-slate-700 uppercase">Temp</span></div><UnitInput label="Celcius" unit="°C" placeholder="36.5" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} /></div><Button onClick={saveVitals} className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm mt-4">Record Entry</Button></div>
                 </div>
                 {vitalHistory.length > 0 && (<div className="border-t border-slate-100"><Table><TableHeader><TableRow className="hover:bg-transparent border-none"><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 pl-6 w-[120px]">Time / Nurse</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">BP (mmHg)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">HR (bpm)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">SpO2 (%)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right">Temp (°C)</TableHead><TableHead className="h-9 text-[10px] uppercase font-bold text-slate-400 text-right pr-6">BMI</TableHead></TableRow></TableHeader><TableBody>{vitalHistory.map((record:any) => (<TableRow key={record.id} className="h-10 hover:bg-slate-50 border-t border-slate-50"><TableCell className="pl-6 py-2"><div className="font-bold text-slate-700 text-xs">{record.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div className="text-[9px] text-slate-400 font-medium">{record.recordedBy}</div></TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.bpSys}/{record.bpDia}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.pulse}</TableCell><TableCell className="text-right py-2 text-xs font-bold text-blue-600">{record.spo2}</TableCell><TableCell className="text-right py-2 text-xs font-mono text-slate-600">{record.temp}</TableCell><TableCell className="text-right py-2 text-xs font-mono pr-6">{record.bmi}</TableCell></TableRow>))}</TableBody></Table></div>)}
             </CardContent>
@@ -182,78 +140,158 @@ function VitalSignsMonitor({ patientAge, historicalHeight, nurseName }: { patien
     )
 }
 
-// --- NEW COMPONENT: VISUAL OBSERVATIONS ---
+// --- VISUAL OBSERVATION CARD (Unchanged) ---
 function VisualObservationCard({ medicalIntent }: { medicalIntent: string }) {
     const { toast } = useToast()
     const [capturedImages, setCapturedImages] = useState<Record<string, { note: string, captured: boolean }>>({})
-
     const intentData = medicalIntents.find(i => i.id === medicalIntent)
     const prompts = intentData?.visualPrompts || []
-
     if (!medicalIntent || prompts.length === 0) return null
+    const handleCapture = (promptId: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } })); toast({ title: "Image Captured", description: "Visual record added to session." }) }
+    const handleNote = (promptId: string, text: string) => { setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } })) }
+    return (
+        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2"><Camera className="h-4 w-4"/> Visual Observations</CardTitle><Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Protocol: {intentData?.label}</Badge></div></CardHeader>
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{prompts.map(prompt => { const data = capturedImages[prompt.id]; return (<div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>{data?.captured ? (<div className="space-y-3"><div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group"><ImageIcon className="h-8 w-8 text-white/50" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button></div><div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div></div><div className="space-y-1"><Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label><Input value={data.note} onChange={e => handleNote(prompt.id, e.target.value)} className="h-8 text-xs bg-slate-50" placeholder={`Describe ${prompt.label.toLowerCase()}...`} /></div></div>) : (<button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group"><div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">{prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}</div><div><div className="text-sm font-bold text-slate-700">{prompt.label}</div><div className="text-[10px] text-slate-400 flex items-center justify-center gap-1"><AlertTriangle className="h-3 w-3"/> Required for Protocol</div></div></button>)}</div>) })}</CardContent>
+        </Card>
+    )
+}
 
-    const handleCapture = (promptId: string) => {
-        // Simulating a file upload / camera capture
-        setCapturedImages(prev => ({ ...prev, [promptId]: { note: "", captured: true } }))
-        toast({ title: "Image Captured", description: "Visual record added to session." })
+// --- NEW COMPONENT: RELATED PARTIES & EMERGENCY CONTACTS ---
+interface RelatedParty {
+    id: string
+    name: string
+    relation: string
+    phone: string
+    isPrimary: boolean
+}
+
+function RelatedPartiesCard() {
+    const { toast } = useToast()
+    const [contacts, setContacts] = useState<RelatedParty[]>([])
+    const [newContact, setNewContact] = useState({ name: "", relation: "spouse", phone: "" })
+
+    const relations = [
+        { value: "spouse", label: "Spouse / Partner" },
+        { value: "parent", label: "Parent / Guardian" },
+        { value: "sibling", label: "Sibling" },
+        { value: "child", label: "Child" },
+        { value: "friend", label: "Friend" },
+        { value: "other", label: "Other" },
+    ]
+
+    const addContact = () => {
+        if (!newContact.name || !newContact.phone) {
+            toast({ title: "Incomplete", description: "Name and Phone are required.", variant: "destructive" })
+            return
+        }
+
+        const isFirst = contacts.length === 0
+        const newEntry: RelatedParty = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: newContact.name,
+            relation: newContact.relation,
+            phone: newContact.phone,
+            isPrimary: isFirst
+        }
+
+        setContacts([...contacts, newEntry])
+        setNewContact({ name: "", relation: "spouse", phone: "" })
+        toast({ title: "Contact Added", description: isFirst ? "Set as Primary Emergency Contact." : "Added to related parties." })
     }
 
-    const handleNote = (promptId: string, text: string) => {
-        setCapturedImages(prev => ({ ...prev, [promptId]: { ...prev[promptId], note: text } }))
+    const setPrimary = (id: string) => {
+        setContacts(prev => prev.map(c => ({ ...c, isPrimary: c.id === id })))
+    }
+
+    const removeContact = (id: string) => {
+        setContacts(prev => prev.filter(c => c.id !== id))
     }
 
     return (
-        <Card className="border-t-4 border-t-purple-500 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <CardHeader className="pb-3 border-b border-slate-50 bg-slate-50/50">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-sm uppercase text-purple-600 flex items-center gap-2">
-                        <Camera className="h-4 w-4"/> Visual Observations
-                    </CardTitle>
-                    <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">
-                        Protocol: {intentData?.label}
-                    </Badge>
-                </div>
+        <Card className="border-t-4 border-t-amber-500 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-50">
+                <CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2">
+                    <Users className="h-4 w-4"/> Emergency Contacts
+                </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {prompts.map(prompt => {
-                    const data = capturedImages[prompt.id]
-                    return (
-                        <div key={prompt.id} className={cn("border rounded-xl p-3 transition-all", data?.captured ? "bg-white border-purple-200 shadow-sm" : "bg-slate-50 border-dashed border-slate-300 hover:border-purple-400 hover:bg-purple-50")}>
-                            {data?.captured ? (
-                                <div className="space-y-3">
-                                    <div className="relative aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden group">
-                                        <ImageIcon className="h-8 w-8 text-white/50" />
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => handleCapture(prompt.id)}>Retake</Button>
-                                        </div>
-                                        <div className="absolute top-2 left-2"><Badge className="bg-emerald-600 text-[10px]">Captured</Badge></div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase font-bold text-slate-500">Observation Notes</Label>
-                                        <Input 
-                                            value={data.note} 
-                                            onChange={e => handleNote(prompt.id, e.target.value)} 
-                                            className="h-8 text-xs bg-slate-50" 
-                                            placeholder={`Describe ${prompt.label.toLowerCase()}...`}
-                                        />
-                                    </div>
+            <CardContent className="p-0">
+                
+                {/* 1. INPUT FORM */}
+                <div className="p-5 space-y-4 bg-white">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-500 font-semibold">Relative Name</Label>
+                            <Input 
+                                value={newContact.name} 
+                                onChange={e => setNewContact({...newContact, name: e.target.value})}
+                                placeholder="Name" 
+                                className="h-10"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-xs text-slate-500 font-semibold">Relationship</Label>
+                            <Select value={newContact.relation} onValueChange={(val) => setNewContact({...newContact, relation: val})}>
+                                <SelectTrigger className="h-10"><SelectValue placeholder="Select" /></SelectTrigger>
+                                <SelectContent>
+                                    {relations.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                            <Label className="text-xs text-slate-500 font-semibold">Phone</Label>
+                            <div className="flex gap-0 rounded-md shadow-sm">
+                                <div className="flex items-center px-3 border border-r-0 rounded-l-md bg-slate-50 text-slate-500 text-sm font-medium whitespace-nowrap min-w-[80px]">
+                                    VN +84
                                 </div>
-                            ) : (
-                                <button onClick={() => handleCapture(prompt.id)} className="w-full h-full flex flex-col items-center justify-center py-6 text-center space-y-2 group">
-                                    <div className="h-10 w-10 bg-white rounded-full flex items-center justify-center shadow-sm border group-hover:scale-110 transition-transform text-purple-600">
-                                        {prompt.icon === 'eye' ? <Eye className="h-5 w-5"/> : <Camera className="h-5 w-5"/>}
+                                <Input 
+                                    value={newContact.phone} 
+                                    onChange={e => setNewContact({...newContact, phone: e.target.value})}
+                                    placeholder="Enter phone number" 
+                                    className="rounded-l-none border-l-0 h-10"
+                                />
+                                <Button onClick={addContact} className="ml-2 bg-amber-500 hover:bg-amber-600 text-white h-10">
+                                    <Plus className="h-4 w-4 mr-1"/> Add
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. LIST VIEW */}
+                {contacts.length > 0 && (
+                    <div className="border-t border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                        <Label className="text-[10px] uppercase font-bold text-slate-400 pl-1">Collected Contacts</Label>
+                        {contacts.map(contact => (
+                            <div key={contact.id} className={cn("flex items-center justify-between p-3 rounded-lg border transition-all", contact.isPrimary ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200")}>
+                                <div className="flex items-center gap-3">
+                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold", contact.isPrimary ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-500")}>
+                                        {contact.name.charAt(0)}
                                     </div>
                                     <div>
-                                        <div className="text-sm font-bold text-slate-700">{prompt.label}</div>
-                                        <div className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
-                                            <AlertTriangle className="h-3 w-3"/> Required for Protocol
+                                        <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                            {contact.name}
+                                            {contact.isPrimary && <Badge className="bg-amber-500 text-[9px] h-4 px-1">Primary</Badge>}
+                                        </div>
+                                        <div className="text-xs text-slate-500 flex items-center gap-2">
+                                            <span className="capitalize">{contact.relation}</span> • <span className="font-mono">{contact.phone}</span>
                                         </div>
                                     </div>
-                                </button>
-                            )}
-                        </div>
-                    )
-                })}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {!contact.isPrimary && (
+                                        <Button variant="ghost" size="sm" onClick={() => setPrimary(contact.id)} className="h-8 w-8 p-0 text-slate-400 hover:text-amber-600" title="Set as Primary">
+                                            <Star className="h-4 w-4"/>
+                                        </Button>
+                                    )}
+                                    <Button variant="ghost" size="sm" onClick={() => removeContact(contact.id)} className="h-8 w-8 p-0 text-slate-400 hover:text-red-600">
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </CardContent>
         </Card>
     )
@@ -353,7 +391,24 @@ export function ReceptionistView() {
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Clinical Intake & Intent */}
+                    {/* Demographics */}
+                    <Card className="border-t-4 border-t-blue-500 shadow-sm md:col-span-2">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-blue-600 flex items-center gap-2"><User className="h-4 w-4"/> Demographics</CardTitle></CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-4">
+                            <div><Label className="text-xs text-slate-500">Full Name</Label><Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase"/></div>
+                            <div>
+                                <Label className="text-xs text-slate-500">Citizen ID</Label>
+                                <div className="flex gap-2"><Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono"/><Button onClick={() => processIdentityVerification({})} disabled={scanStep !== 'idle'} variant="secondary">Check</Button></div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* --- REPLACED: RELATED PARTIES CARD --- */}
+                    <div className="md:col-span-2">
+                        <RelatedPartiesCard />
+                    </div>
+
+                    {/* Clinical Intake */}
                     <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
                         <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4"/> Clinical Context</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
@@ -372,12 +427,12 @@ export function ReceptionistView() {
                         </CardContent>
                     </Card>
 
-                    {/* VITAL SIGNS MONITOR (Cleaned) */}
+                    {/* VITAL SIGNS MONITOR */}
                     <div className="md:col-span-2">
                         <VitalSignsMonitor nurseName="Nurse Lan" patientAge={scannedIdentity?.age} historicalHeight={scannedIdentity?.historicalHeight} />
                     </div>
 
-                    {/* --- NEW: VISUAL OBSERVATIONS (INSERTED HERE) --- */}
+                    {/* VISUAL OBSERVATIONS */}
                     <div className="md:col-span-2">
                         <VisualObservationCard medicalIntent={formData.medicalIntent} />
                     </div>

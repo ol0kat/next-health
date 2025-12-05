@@ -69,6 +69,33 @@ const labTestsData: LabTest[] = [
   { id: "fsh", name: "FSH", price: 150000, category: "Hormones", sampleType: "Serum", turnaroundHours: 24, description: "Follicle Stimulating Hormone" },
 ]
 
+
+
+// --- MOCK DATA: 2025 REFORM STRUCTURE (34 Provinces, No Districts) ---
+const NEW_ADMIN_UNITS = {
+    provinces: [
+        { id: "01", name: "Thủ đô Hà Nội" },
+        { id: "02", name: "Tỉnh Hải Đông" }, // Example: Merged Hai Duong + Quang Ninh
+        { id: "03", name: "Tỉnh Lào Cai" },  // Example: Merged Lao Cai + Yen Bai
+        { id: "04", name: "Tỉnh Bắc Thái" }, // Example: Merged Thai Nguyen + Bac Kan
+    ],
+    // In a real app, fetch this via API based on provinceId
+    communes: {
+        "01": [
+            { id: "1001", name: "Phường Ba Đình" }, 
+            { id: "1002", name: "Phường Hoàn Kiếm" },
+            { id: "1003", name: "Xã Bát Tràng" }
+        ],
+        "02": [
+            { id: "2001", name: "Phường Hồng Gai" },
+            { id: "2002", name: "Xã Bạch Đằng" }
+        ],
+        // ... handle other IDs
+    } as Record<string, { id: string; name: string }[]>
+};
+
+
+
 const medicalIntents: MedicalIntent[] = [
     { 
         id: "general_checkup", 
@@ -218,8 +245,22 @@ function IdentityVerificationCard({
     )
 }
 
-// --- COMPONENT: DEMOGRAPHICS (UPDATED) ---
 function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
+    
+    // Logic: Get list of communes based on selected Province
+    const availableCommunes = useMemo(() => {
+        if (!formData.provinceId) return [];
+        return NEW_ADMIN_UNITS.communes[formData.provinceId] || [];
+    }, [formData.provinceId]);
+
+    const handleProvinceChange = (val: string) => {
+        setFormData({
+            ...formData,
+            provinceId: val,
+            communeId: "", // CRITICAL: Reset commune when province changes
+        });
+    };
+
     return (
         <Card className="border-t-4 border-t-slate-500 shadow-sm h-full">
             <CardHeader className="pb-2">
@@ -228,37 +269,56 @@ function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-3">
+                {/* Full Name */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500">Full Name</Label>
-                    <Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} className="font-bold uppercase" placeholder="NGUYEN VAN A"/>
+                    <Input 
+                        value={formData.fullName} 
+                        onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                        className="font-bold uppercase" 
+                        placeholder="NGUYEN VAN A"
+                    />
                 </div>
                 
-                {/* ID Field with Manual Check Button */}
+                {/* ID / Passport */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500">ID / Passport</Label>
                     <div className="flex gap-2">
-                        <Input value={formData.citizenId} onChange={e => setFormData({...formData, citizenId: e.target.value})} className="font-mono" placeholder="079..."/>
+                        <Input 
+                            value={formData.citizenId} 
+                            onChange={e => setFormData({...formData, citizenId: e.target.value})} 
+                            className="font-mono" 
+                            placeholder="079..."
+                        />
                         <Button onClick={onCheckBHYT} variant="secondary" className="whitespace-nowrap bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200">
                             Check BHYT
                         </Button>
                     </div>
                 </div>
 
+                {/* DOB & Gender */}
                 <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-500">DOB</Label>
-                        <Input value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} placeholder="DD/MM/YYYY"/>
+                        <Input 
+                            value={formData.dob} 
+                            onChange={e => setFormData({...formData, dob: e.target.value})} 
+                            placeholder="DD/MM/YYYY"
+                        />
                     </div>
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-500">Gender</Label>
                         <Select value={formData.gender} onValueChange={(val) => setFormData({...formData, gender: val})}>
                             <SelectTrigger className="h-10"><SelectValue placeholder="Select" /></SelectTrigger>
-                            <SelectContent><SelectItem value="male">Male</SelectItem><SelectItem value="female">Female</SelectItem></SelectContent>
+                            <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                            </SelectContent>
                         </Select>
                     </div>
                 </div>
 
-                {/* Phone with Prefix */}
+                {/* Phone */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500 flex items-center gap-1"><Phone className="h-3 w-3"/> Phone</Label>
                     <div className="flex gap-2">
@@ -267,28 +327,79 @@ function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
                             <SelectContent>
                                 <SelectItem value="+84">🇻🇳 +84</SelectItem>
                                 <SelectItem value="+1">🇺🇸 +1</SelectItem>
-                                <SelectItem value="+44">🇬🇧 +44</SelectItem>
-                                <SelectItem value="+81">🇯🇵 +81</SelectItem>
-                                <SelectItem value="+82">🇰🇷 +82</SelectItem>
+                                {/* Add other codes */}
                             </SelectContent>
                         </Select>
-                        <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="909 123 456" className="flex-1"/>
+                        <Input 
+                            value={formData.phone} 
+                            onChange={e => setFormData({...formData, phone: e.target.value})} 
+                            placeholder="909 123 456" 
+                            className="flex-1"
+                        />
                     </div>
                 </div>
 
+                {/* Email */}
                 <div className="space-y-1">
                     <Label className="text-xs text-slate-500 flex items-center gap-1"><Mail className="h-3 w-3"/> Email</Label>
-                    <Input value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="abc@email.com"/>
+                    <Input 
+                        value={formData.email} 
+                        onChange={e => setFormData({...formData, email: e.target.value})} 
+                        placeholder="abc@email.com"
+                    />
                 </div>
-                <div className="space-y-1">
-                    <Label className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="h-3 w-3"/> Address</Label>
-                    <Input value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="123 Street..."/>
+
+                {/* --- NEW ADMINISTRATIVE ADDRESS STRUCTURE (2-TIER) --- */}
+                <div className="space-y-2 pt-1 border-t border-dashed border-slate-200">
+                    <Label className="text-xs text-slate-500 flex items-center gap-1">
+                        <MapPin className="h-3 w-3"/> 
+                        Current Address (New 2025 Standard)
+                    </Label>
+                    
+                    {/* Tier 1 & Tier 2: Province & Commune (No District) */}
+                    <div className="grid grid-cols-2 gap-2">
+                        {/* Dropdown 1: Province */}
+                        <Select value={formData.provinceId} onValueChange={handleProvinceChange}>
+                            <SelectTrigger className="h-10 bg-slate-50">
+                                <SelectValue placeholder="Province / City" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {NEW_ADMIN_UNITS.provinces.map(prov => (
+                                    <SelectItem key={prov.id} value={prov.id}>{prov.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Dropdown 2: Commune (Filtered by Province) */}
+                        <Select 
+                            value={formData.communeId} 
+                            onValueChange={(val) => setFormData({...formData, communeId: val})}
+                            disabled={!formData.provinceId} // Disable until province selected
+                        >
+                            <SelectTrigger className="h-10 bg-slate-50">
+                                <SelectValue placeholder="Commune / Ward" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableCommunes.map(comm => (
+                                    <SelectItem key={comm.id} value={comm.id}>{comm.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Street Name / House Number */}
+                    <Input 
+                        value={formData.address} 
+                        onChange={e => setFormData({...formData, address: e.target.value})} 
+                        placeholder="House No, Street Name..."
+                        className="h-10"
+                    />
                 </div>
+
             </CardContent>
         </Card>
     )
 }
-
 // --- COMPONENT: FINANCIAL INFO ---
 function FinancialInfoCard({ data, setData }: any) {
     return (
@@ -727,13 +838,14 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
   // STATE
   const [scanStep, setScanStep] = useState<"idle" | "cccd" | "checking-bhyt" | "complete">("idle")
   const [scannedIdentity, setScannedIdentity] = useState<any>(null)
-  
-  const [formData, setFormData] = useState({ 
-      fullName: "", dob: "", gender: "", citizenId: "", 
-      phonePrefix: "+84", phone: "", email: "", address: "",
-      selectedIntents: [] as string[] // Clinical Intents
-  })
-  
+
+    const [formData, setFormData] = useState({
+        fullName: "", dob: "", gender: "", citizenId: "",
+        phonePrefix: "+84", phone: "", email: "", address: "", provinceId: "",
+        communeId: "",
+        selectedIntents: [] as string[]
+    })
+
   const [financialData, setFinancialData] = useState({ cardLast4: "", cardExpiry: "", bankName: "", bankAccount: "" })
   const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({ provider: "", policyNumber: "", expiryDate: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false })
   

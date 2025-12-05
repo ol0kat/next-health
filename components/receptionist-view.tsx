@@ -621,7 +621,7 @@ export function FinancialInfoCard({ data, setData }: any) {
                     </div>
                 </div>
             )}
-        </Card>
+        </Card>Policy 
     )
 }
 
@@ -1127,102 +1127,172 @@ function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalInt
 
 // --- 8. TELEHEALTH (Specialty Filter) ---
 
-// --- 8. TELEHEALTH DISPATCH CARD (NEW CALENDAR UX) ---
-function TelehealthDispatchCard({ medicalIntents: selectedIntents, requiredWaitHours = 0 }: { medicalIntents: string[], requiredWaitHours?: number }) {
+
+
+export default function TelehealthDispatchCard({ medicalIntents = ["consult"], requiredWaitHours = 0 }: { medicalIntents?: string[], requiredWaitHours?: number }) {
     const { toast } = useToast()
+    
+    // Global State
     const [specialtyFilter, setSpecialtyFilter] = useState("all")
     const [bookingMode, setBookingMode] = useState<"auto" | "manual">("auto")
+    
+    // Selection State
+    const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
-    const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
 
-    // Calculate when results will be ready
+    // Derived Data
     const resultReadyTime = useMemo(() => {
         const d = new Date()
         d.setHours(d.getHours() + requiredWaitHours)
         return d
     }, [requiredWaitHours])
 
-    // Generate next 3 days
-    const dates = useMemo(() => {
-        return Array.from({ length: 3 }).map((_, i) => {
-            const d = new Date()
-            d.setDate(d.getDate() + i)
-            return d
-        })
-    }, [])
+    const dates = useMemo(() => Array.from({ length: 3 }).map((_, i) => {
+        const d = new Date()
+        d.setDate(d.getDate() + i)
+        return d
+    }), [])
 
-    // Generate Mock Time Slots
-    const timeSlots = useMemo(() => {
-        const slots = []
-        // Morning 8-12, Afternoon 13-17, Evening 17-21
-        const periods = [
-            { label: "Morning", start: 8, end: 11, icon: <Zap className="h-3 w-3" /> },
-            { label: "Afternoon", start: 13, end: 16, icon: <Clock className="h-3 w-3" /> },
-            { label: "Evening", start: 17, end: 20, icon: <CheckCircle2 className="h-3 w-3" /> } // Using CheckCircle just as a distinct icon placeholder or Moon
-        ]
-
-        for (const p of periods) {
-            const periodSlots = []
-            for (let hour = p.start; hour <= p.end; hour++) {
-                const timeStr = `${hour}:00`
-                // Create a comparable date object for this slot
-                const slotDate = new Date(selectedDate)
-                slotDate.setHours(hour, 0, 0, 0)
-
-                // Logic: Disable if slot is BEFORE result ready time
-                // Or if slot is in the past (for today)
-                const isTooEarly = slotDate < resultReadyTime
-
-                periodSlots.push({ time: timeStr, disabled: isTooEarly, date: slotDate })
-            }
-            slots.push({ ...p, slots: periodSlots })
-        }
-        return slots
-    }, [selectedDate, resultReadyTime])
-
-    // Filter Doctors
-    const uniqueSpecialties = useMemo(() => ["all", ...Array.from(new Set(doctorPool.map(d => d.specialty)))], [])
     const filteredDoctors = useMemo(() => {
         let docs = [...doctorPool];
         if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter);
         return docs
     }, [specialtyFilter])
 
-    // Auto-select best doctor for Auto Mode
+    const selectedDoctor = useMemo(() => 
+        doctorPool.find(d => d.id === selectedDoctorId), 
+    [selectedDoctorId])
+
+    const uniqueSpecialties = useMemo(() => ["all", ...Array.from(new Set(doctorPool.map(d => d.specialty)))], [])
+
+    // --- EFFECTS ---
+
+    // When switching modes, handle selection logic
     useEffect(() => {
-        if (filteredDoctors.length > 0 && !selectedDoctor) setSelectedDoctor(filteredDoctors[0].id)
-    }, [filteredDoctors])
+        if (bookingMode === 'auto') {
+            // In auto mode, default to first available doctor if none selected
+            if (!selectedDoctorId && filteredDoctors.length > 0) {
+                setSelectedDoctorId(filteredDoctors[0].id)
+            }
+        } else {
+            // In manual mode, we don't auto-select. 
+            // If the user already picked someone in Auto, we keep them selected.
+            // If they haven't picked anyone, we leave it null so they see the list.
+            setSelectedSlot(null) // Reset time slot when switching modes
+        }
+    }, [bookingMode, filteredDoctors])
+
+
+    // --- HANDLERS ---
+
+    const handleDoctorSelect = (id: string) => {
+        setSelectedDoctorId(id);
+        setSelectedSlot(null); // Reset slot if doctor changes
+    }
 
     const handleBook = () => {
-        const drName = doctorPool.find(d => d.id === selectedDoctor)?.name || "Assigned Doctor"
+        if (!selectedDoctor) return;
+
         const timeMsg = bookingMode === 'auto'
             ? `as soon as results are ready (~${requiredWaitHours}h)`
             : `on ${selectedDate.toLocaleDateString('en-GB', { weekday: 'short' })} at ${selectedSlot}`
 
         toast({
             title: "Telehealth Scheduled",
-            description: `${drName} booked for ${timeMsg}. SMS sent to patient.`,
-            className: "bg-pink-600 text-white"
+            description: `${selectedDoctor.name} booked for ${timeMsg}.`,
+            className: "bg-pink-600 text-white border-none"
         })
     }
 
-    if (selectedIntents.length === 0) return null
+    // Generate Slots (Simplified for brevity)
+    const timeSlots = useMemo(() => {
+        const slots = []
+        const periods = [
+            { label: "Morning", start: 8, end: 11, icon: <Zap className="h-3 w-3" /> },
+            { label: "Afternoon", start: 13, end: 16, icon: <Clock className="h-3 w-3" /> },
+            { label: "Evening", start: 17, end: 20, icon: <CheckCircle2 className="h-3 w-3" /> }
+        ]
+
+        for (const p of periods) {
+            const periodSlots = []
+            for (let hour = p.start; hour <= p.end; hour++) {
+                const timeStr = `${hour}:00`
+                const slotDate = new Date(selectedDate)
+                slotDate.setHours(hour, 0, 0, 0)
+                const isTooEarly = slotDate < resultReadyTime
+                periodSlots.push({ time: timeStr, disabled: isTooEarly })
+            }
+            slots.push({ ...p, slots: periodSlots })
+        }
+        return slots
+    }, [selectedDate, resultReadyTime])
+
+    if (medicalIntents.length === 0) return null
+
+    // --- RENDER HELPERS ---
+
+    const DoctorListParams = {
+        showAvailability: true,
+        selectable: true,
+    }
+
+    const renderDoctorList = (doctors: typeof doctorPool) => (
+        <div className="max-h-[300px] overflow-y-auto">
+            {doctors.map(dr => (
+                <div 
+                    key={dr.id} 
+                    onClick={() => handleDoctorSelect(dr.id)} 
+                    className={cn(
+                        "p-3 border-b flex justify-between items-center cursor-pointer transition-all hover:bg-slate-50 border-l-4",
+                        selectedDoctorId === dr.id 
+                            ? "bg-pink-50 border-l-pink-500" 
+                            : "border-l-transparent"
+                    )}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold", dr.avatarColor)}>
+                            {dr.name.substring(0, 2)}
+                        </div>
+                        <div>
+                            <div className="text-sm font-bold text-slate-700">{dr.name}</div>
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{dr.specialty}</div>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className={cn("text-xs font-bold", dr.status === 'online' ? "text-green-600" : "text-slate-400")}>
+                            {dr.status === 'online' ? 'Available' : 'Busy'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">Queue: {dr.queueLength}</div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
 
     return (
-        <Card className="border-t-4 border-t-pink-500 shadow-sm">
+        <Card className="border-t-4 border-t-pink-500 shadow-sm w-full max-w-md mx-auto bg-white">
             <CardHeader className="pb-3 border-b border-slate-50">
-                <div className="flex flex-row items-center justify-between mb-3">
-                    <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2"><Video className="h-4 w-4" /> Telehealth Dispatch</CardTitle>
-                    <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}><SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Specialty" /></SelectTrigger><SelectContent>{uniqueSpecialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                <div className="flex flex-row items-center justify-between mb-2">
+                    <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2">
+                        <Video className="h-4 w-4" /> Telehealth Dispatch
+                    </CardTitle>
+                    <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+                        <SelectTrigger className="h-7 w-32 text-xs bg-slate-50 border-slate-200">
+                            <SelectValue placeholder="Specialty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {uniqueSpecialties.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
 
-                {/* Result Wait Time Banner */}
+                {/* Warning Banner */}
                 {requiredWaitHours > 0 && (
-                    <div className="bg-amber-50 text-amber-800 text-xs px-3 py-2 rounded-md flex items-center gap-2 border border-amber-100">
-                        <CalendarClock className="h-4 w-4 text-amber-600" />
+                    <div className="bg-amber-50 text-amber-800 text-[11px] px-3 py-2 rounded-md flex items-start gap-2 border border-amber-100 leading-tight">
+                        <CalendarClock className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
                         <span>
-                            <strong>Wait Time Enforced:</strong> Lab results ready by <span className="font-bold">{resultReadyTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>. Earlier slots disabled.
+                            Labs processing. Earliest booking: <span className="font-bold">{resultReadyTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>.
                         </span>
                     </div>
                 )}
@@ -1237,100 +1307,127 @@ function TelehealthDispatchCard({ medicalIntents: selectedIntents, requiredWaitH
                         </TabsList>
                     </div>
 
-                    {/* MODE 1: AUTO DISPATCH (Classic) */}
-                    <TabsContent value="auto" className="p-0 m-0">
-                        <div className="max-h-48 overflow-y-auto">
-                            {filteredDoctors.map(dr => (
-                                <div key={dr.id} onClick={() => setSelectedDoctor(dr.id)} className={cn("p-3 border-b flex justify-between items-center cursor-pointer hover:bg-slate-50 border-l-4", selectedDoctor === dr.id ? "bg-pink-50 border-l-pink-500" : "border-l-transparent")}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[10px]", dr.avatarColor)}>{dr.name.substring(0, 2)}</div>
-                                        <div><div className="text-sm font-bold text-slate-700">{dr.name}</div><div className="text-[10px] text-slate-500">{dr.specialty}</div></div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xs font-bold text-slate-700">{dr.status === 'online' ? 'Available' : 'Busy'}</div>
-                                        <div className="text-[10px] text-slate-400">Queue: {dr.queueLength}</div>
-                                    </div>
-                                </div>
-                            ))}
+                    {/* --- TAB 1: AUTO --- */}
+                    <TabsContent value="auto" className="p-0 m-0 min-h-[250px] flex flex-col justify-between">
+                        <div>
+                            <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-white">
+                                Select Available Doctor
+                            </div>
+                            {renderDoctorList(filteredDoctors)}
                         </div>
                     </TabsContent>
 
-                    {/* MODE 2: MANUAL CALENDAR */}
-                    <TabsContent value="manual" className="p-4 m-0 space-y-4">
-                        {/* Date Selector */}
-                        <div className="flex gap-2 overflow-x-auto pb-2">
-                            {dates.map(date => {
-                                const isSelected = date.toDateString() === selectedDate.toDateString()
-                                return (
-                                    <button
-                                        key={date.toString()}
-                                        onClick={() => setSelectedDate(date)}
-                                        className={cn(
-                                            "flex-1 min-w-[80px] py-2 rounded-lg border text-center transition-all",
-                                            isSelected ? "bg-slate-800 text-white border-slate-800 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                                        )}
-                                    >
-                                        <div className="text-[10px] uppercase font-bold opacity-70">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
-                                        <div className="text-sm font-bold">{date.getDate()}</div>
-                                    </button>
-                                )
-                            })}
-                        </div>
-
-                        {/* Time Grid */}
-                        <div className="space-y-4">
-                            {timeSlots.map(period => (
-                                <div key={period.label}>
-                                    <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                        {period.icon} {period.label}
+                    {/* --- TAB 2: MANUAL --- */}
+                    <TabsContent value="manual" className="p-0 m-0 min-h-[250px]">
+                        
+                        {/* STEP 1: Select Doctor (If none selected) */}
+                        {!selectedDoctorId ? (
+                             <div>
+                                <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-white flex justify-between items-center">
+                                    <span>Step 1: Select Doctor</span>
+                                </div>
+                                {renderDoctorList(filteredDoctors)}
+                            </div>
+                        ) : (
+                        /* STEP 2: Select Time (If doctor selected) */
+                            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                                {/* Selected Doctor Header */}
+                                <div className="bg-pink-50 p-3 flex items-center justify-between border-b border-pink-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px]", selectedDoctor?.avatarColor)}>
+                                            {selectedDoctor?.name.substring(0, 2)}
+                                        </div>
+                                        <div className="text-sm font-bold text-pink-900">{selectedDoctor?.name}</div>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {period.slots.map(slot => (
-                                            <button
-                                                key={slot.time}
-                                                disabled={slot.disabled}
-                                                onClick={() => setSelectedSlot(slot.time)}
-                                                className={cn(
-                                                    "py-1.5 rounded text-xs font-bold border transition-all relative overflow-hidden",
-                                                    slot.disabled
-                                                        ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
-                                                        : selectedSlot === slot.time
-                                                            ? "bg-pink-600 text-white border-pink-600 shadow-sm"
-                                                            : "bg-white text-slate-700 border-slate-200 hover:border-pink-300 hover:text-pink-600"
-                                                )}
-                                            >
-                                                {slot.time}
-                                            </button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        onClick={() => { setSelectedDoctorId(null); setSelectedSlot(null); }}
+                                        className="h-6 text-[10px] hover:bg-pink-100 text-pink-700 hover:text-pink-900 px-2"
+                                    >
+                                        Change <User className="ml-1 h-3 w-3" />
+                                    </Button>
+                                </div>
+
+                                <div className="p-4 space-y-4">
+                                    {/* Date Strips */}
+                                    <div className="flex gap-2">
+                                        {dates.map(date => {
+                                            const isSelected = date.toDateString() === selectedDate.toDateString()
+                                            return (
+                                                <button
+                                                    key={date.toString()}
+                                                    onClick={() => setSelectedDate(date)}
+                                                    className={cn(
+                                                        "flex-1 py-2 rounded-md border text-center transition-all",
+                                                        isSelected 
+                                                            ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-200" 
+                                                            : "bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:bg-pink-50"
+                                                    )}
+                                                >
+                                                    <div className="text-[10px] uppercase font-bold opacity-70">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
+                                                    <div className="text-sm font-bold">{date.getDate()}</div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* Time Grid */}
+                                    <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                                        {timeSlots.map(period => (
+                                            <div key={period.label}>
+                                                <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    {period.icon} {period.label}
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    {period.slots.map(slot => (
+                                                        <button
+                                                            key={slot.time}
+                                                            disabled={slot.disabled}
+                                                            onClick={() => setSelectedSlot(slot.time)}
+                                                            className={cn(
+                                                                "py-1.5 rounded text-xs font-bold border transition-all",
+                                                                slot.disabled
+                                                                    ? "bg-slate-50 text-slate-200 border-slate-100 cursor-not-allowed"
+                                                                    : selectedSlot === slot.time
+                                                                        ? "bg-pink-600 text-white border-pink-600 shadow-sm scale-105"
+                                                                        : "bg-white text-slate-600 border-slate-200 hover:border-pink-400 hover:text-pink-600"
+                                                            )}
+                                                        >
+                                                            {slot.time}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-
-                        {/* Selected Context */}
-                        {selectedSlot && (
-                            <div className="bg-pink-50 border border-pink-100 rounded p-2 text-center text-xs text-pink-800">
-                                Booking <span className="font-bold">{doctorPool[0].name}</span> for <span className="font-bold">{selectedDate.toLocaleDateString()} at {selectedSlot}</span>
                             </div>
                         )}
                     </TabsContent>
                 </Tabs>
 
                 {/* Footer Action */}
-                <div className="p-3 bg-slate-50 border-t border-slate-100">
+                <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
+                    {bookingMode === 'manual' && selectedDoctorId && !selectedSlot && (
+                        <div className="text-center text-[10px] text-slate-400 italic">Please select a time slot</div>
+                    )}
+                    
                     <Button
                         onClick={handleBook}
-                        className="w-full bg-pink-600 hover:bg-pink-700"
-                        disabled={bookingMode === 'manual' && !selectedSlot}
+                        className="w-full bg-pink-600 hover:bg-pink-700 transition-colors shadow-sm"
+                        disabled={
+                            (bookingMode === 'manual' && (!selectedSlot || !selectedDoctorId)) ||
+                            (bookingMode === 'auto' && !selectedDoctorId)
+                        }
                     >
-                        {bookingMode === 'auto' ? "Dispatch Now" : "Schedule Appointment"}
+                        {bookingMode === 'auto' ? "Dispatch Now" : "Confirm Schedule"}
                     </Button>
                 </div>
             </CardContent>
         </Card>
     )
 }
-
 
 // --- MAIN PAGE ---
 export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => Promise<void> } = {}) {

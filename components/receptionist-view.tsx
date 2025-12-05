@@ -87,14 +87,14 @@ interface MedicalIntent {
     visualPrompts: VisualPrompt[];
 }
 
-interface PrivateInsuranceData {
-    provider: string;
-    policyNumber: string;
-    expiryDate: string;
-    frontImg: string | null;
-    backImg: string | null;
-    estimatedCoverage: number;
-    isActive: boolean
+export interface PrivateInsuranceData {
+  id: string; // Unique ID for list management
+  provider: string;
+  policyNumber: string;
+  expiryDate: string;
+  frontImg: string | null;
+  backImg: string | null;
+  estimatedCoverage: number;
 }
 
 // --- MOCK DATA ---
@@ -621,214 +621,235 @@ export function FinancialInfoCard({ data, setData }: any) {
     )
 }
 
-
-// --- TYPES ---
-export interface PrivateInsuranceData {
-    id: string;
-    provider: string;
-    policyNumber: string;
-    expiryDate: string;
-    frontImg: string | null;
-    backImg: string | null;
-    estimatedCoverage: number;
-}
-
-// --- MANAGER COMPONENT ---
-// Place this where you want the list of insurances to appear
 export function PrivateInsuranceManager() {
-    // Start with 1 empty card
-    const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
-        {
-            id: "init-1",
-            provider: "",
-            policyNumber: "",
-            expiryDate: "",
-            frontImg: null,
-            backImg: null,
-            estimatedCoverage: 0.0,
-        }
-    ]);
+  // Initialize with one empty card
+  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
+    {
+      id: "init-" + Math.random().toString(36).substr(2, 9),
+      provider: "",
+      policyNumber: "",
+      expiryDate: "",
+      frontImg: null,
+      backImg: null,
+      estimatedCoverage: 0.0,
+    },
+  ]);
 
-    // Add a new empty card
-    const addInsurance = () => {
-        const newCard: PrivateInsuranceData = {
-            id: Math.random().toString(36).substr(2, 9),
-            provider: "",
-            policyNumber: "",
-            expiryDate: "",
-            frontImg: null,
-            backImg: null,
-            estimatedCoverage: 0.0,
-        };
-        setInsurances([...insurances, newCard]);
+  // Add a new empty card
+  const addInsurance = () => {
+    const newCard: PrivateInsuranceData = {
+      id: "new-" + Math.random().toString(36).substr(2, 9),
+      provider: "",
+      policyNumber: "",
+      expiryDate: "",
+      frontImg: null,
+      backImg: null,
+      estimatedCoverage: 0.0,
     };
+    setInsurances([...insurances, newCard]);
+  };
 
-    // Update a specific card
-    const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
-        setInsurances((prev) =>
-            prev.map((item) => (item.id === id ? updatedData : item))
-        );
-    };
-
-    // Remove a specific card
-    const removeInsurance = (id: string) => {
-        setInsurances((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    return (
-        <div className="w-full space-y-4">
-            <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-700">Private Insurance</h3>
-            </div>
-
-            <div className="space-y-4">
-                {insurances.map((insurance) => (
-                    <PrivateInsuranceCard
-                        key={insurance.id}
-                        data={insurance}
-                        canDelete={insurances.length > 0}
-                        onChange={(newData) => updateInsurance(insurance.id, newData)}
-                        onDelete={() => removeInsurance(insurance.id)}
-                    />
-                ))}
-            </div>
-
-            {/* ADD BUTTON AT THE BOTTOM */}
-            <Button
-                variant="outline"
-                className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50"
-                onClick={addInsurance}
-            >
-                <Plus className="mr-2 h-4 w-4" /> Add Another Policy
-            </Button>
-        </div>
+  // Update a specific card by ID
+  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
+    setInsurances((prev) =>
+      prev.map((item) => (item.id === id ? updatedData : item))
     );
+  };
+
+  // Remove a specific card by ID
+  const removeInsurance = (id: string) => {
+    setInsurances((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="w-full space-y-5">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-700">
+          Private Insurance Policies ({insurances.length})
+        </h3>
+      </div>
+
+      <div className="space-y-4">
+        {insurances.map((insurance) => (
+          <PrivateInsuranceCard
+            key={insurance.id}
+            data={insurance}
+            canDelete={insurances.length > 0} // Allow deleting even the last one if you want, or change to > 1
+            onChange={(newData) => updateInsurance(insurance.id, newData)}
+            onDelete={() => removeInsurance(insurance.id)}
+          />
+        ))}
+      </div>
+
+      {/* Add Button */}
+      <Button
+        variant="outline"
+        onClick={addInsurance}
+        className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 transition-all"
+      >
+        <Plus className="mr-2 h-4 w-4" /> Add Another Policy
+      </Button>
+    </div>
+  );
 }
 
-// --- CARD COMPONENT ---
-function PrivateInsuranceCard({
-    data,
-    onChange,
-    onDelete,
-    canDelete
-}: {
-    data: PrivateInsuranceData,
-    onChange: (d: PrivateInsuranceData) => void,
-    onDelete: () => void,
-    canDelete: boolean
-}) {
-    const { toast } = useToast()
-    const [isScanning, setIsScanning] = useState(false)
+interface CardProps {
+  data: PrivateInsuranceData;
+  onChange: (d: PrivateInsuranceData) => void;
+  onDelete: () => void;
+  canDelete: boolean;
+}
 
-    const handleScanCard = () => {
-        setIsScanning(true);
-        setTimeout(() => {
-            setIsScanning(false);
-            onChange({
-                ...data,
-                provider: "baoviet",
-                policyNumber: "BV-8899-X",
-                expiryDate: "2025-12-31",
-                frontImg: "captured",
-                backImg: "captured",
-                estimatedCoverage: 0.8
-            });
-            toast({ title: "Card Scanned", description: "Policy details detected." })
-        }, 1500)
-    }
+export function PrivateInsuranceCard({ data, onChange, onDelete, canDelete }: CardProps) {
+  const { toast } = useToast();
+  const [isScanning, setIsScanning] = useState(false);
 
-    return (
-        <Card className="group border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
-            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
-                    <Shield className="h-4 w-4" />
-                    {data.provider ? data.provider : "New Policy"}
-                </CardTitle>
+  // Simulate scanning specifically for this card
+  const handleScanCard = () => {
+    if (data.frontImg) return; // Prevent rescanning if already done (optional)
 
-                {canDelete && (
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                        onClick={onDelete}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                )}
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={handleScanCard}
-                        disabled={isScanning || !!data.frontImg}
-                        className={cn(
-                            "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all",
-                            data.frontImg
-                                ? "border-sky-500 bg-sky-50"
-                                : "border-slate-300 hover:border-sky-400 hover:bg-slate-50"
-                        )}
-                    >
-                        {isScanning ? (
-                            <span className="animate-pulse text-[10px] font-bold text-sky-500">SCANNING...</span>
-                        ) : data.frontImg ? (
-                            <>
-                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
-                                <span className="text-[10px] uppercase font-bold text-sky-600">Front</span>
-                            </>
-                        ) : (
-                            <>
-                                <Camera className="h-5 w-5 text-slate-400 mb-1" />
-                                <span className="text-[10px] uppercase font-bold text-slate-500">Front</span>
-                            </>
-                        )}
-                    </button>
+    setIsScanning(true);
+    
+    setTimeout(() => {
+      setIsScanning(false);
+      
+      // Update ONLY this card's data
+      onChange({
+        ...data,
+        provider: "Bao Viet Insurance",
+        policyNumber: `BV-${Math.floor(Math.random() * 9000) + 1000}-X`, // Randomize slightly for effect
+        expiryDate: "2025-12-31",
+        frontImg: "captured-front-hash",
+        backImg: "captured-back-hash",
+        estimatedCoverage: 0.8,
+      });
 
-                    <button className={cn(
-                        "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1",
-                        data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300"
-                    )}>
-                        {data.backImg ? (
-                            <>
-                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
-                                <span className="text-[10px] uppercase font-bold text-sky-600">Back</span>
-                            </>
-                        ) : (
-                            <>
-                                <Camera className="h-5 w-5 text-slate-400 mb-1" />
-                                <span className="text-[10px] uppercase font-bold text-slate-500">Back</span>
-                            </>
-                        )}
-                    </button>
-                </div>
+      toast({ 
+        title: "Policy Detected", 
+        description: "Insurance details have been auto-filled." 
+      });
+    }, 1500);
+  };
 
-                <Input
-                    value={data.provider}
-                    onChange={(e) => onChange({ ...data, provider: e.target.value })}
-                    placeholder="Provider (e.g. Bao Viet)"
-                    className="h-9 text-sm"
+  return (
+    <Card className="group border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all animate-in fade-in slide-in-from-bottom-2">
+      {/* Header */}
+      <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
+          <Shield className="h-4 w-4" />
+          {data.provider ? data.provider : "New Policy"}
+        </CardTitle>
+
+        {canDelete && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 -mr-2"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </CardHeader>
+
+      <CardContent className="p-4 space-y-4">
+        {/* Camera / Scan Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Front Image Area */}
+          <button
+            onClick={handleScanCard}
+            disabled={isScanning || !!data.frontImg}
+            className={cn(
+              "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden",
+              data.frontImg
+                ? "border-sky-500 bg-sky-50"
+                : "border-slate-300 hover:border-sky-400 hover:bg-slate-50"
+            )}
+          >
+            {isScanning ? (
+              <div className="flex flex-col items-center animate-pulse">
+                <div className="h-5 w-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-1"/>
+                <span className="text-[10px] font-bold text-sky-500">SCANNING...</span>
+              </div>
+            ) : data.frontImg ? (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
+                <span className="text-[10px] uppercase font-bold text-sky-600">Front OK</span>
+              </>
+            ) : (
+              <>
+                <Camera className="h-5 w-5 text-slate-400 mb-1" />
+                <span className="text-[10px] uppercase font-bold text-slate-500">Front</span>
+              </>
+            )}
+          </button>
+
+          {/* Back Image Area (Manual or Auto-filled) */}
+          <button
+            className={cn(
+              "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all",
+              data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300"
+            )}
+          >
+            {data.backImg ? (
+              <>
+                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
+                <span className="text-[10px] uppercase font-bold text-sky-600">Back OK</span>
+              </>
+            ) : (
+              <>
+                <Camera className="h-5 w-5 text-slate-400 mb-1" />
+                <span className="text-[10px] uppercase font-bold text-slate-500">Back</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Text Inputs */}
+        <div className="space-y-3">
+          <Input
+            value={data.provider}
+            onChange={(e) => onChange({ ...data, provider: e.target.value })}
+            placeholder="Provider (e.g. Bao Viet)"
+            className="h-10 text-sm bg-slate-50/50"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              value={data.policyNumber}
+              onChange={(e) => onChange({ ...data, policyNumber: e.target.value })}
+              placeholder="Policy #"
+              className="h-10 text-sm font-mono bg-slate-50/50"
+            />
+            <div className="relative">
+              <Input
+                type="date"
+                value={data.expiryDate}
+                onChange={(e) => onChange({ ...data, expiryDate: e.target.value })}
+                className="h-10 text-sm font-mono bg-slate-50/50 pl-9"
+              />
+              <CalendarIcon className="h-4 w-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Coverage Estimate */}
+        <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-2">
+          <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
+          <div className="flex items-center gap-2">
+             <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-sky-500 transition-all duration-500" 
+                  style={{ width: `${data.estimatedCoverage * 100}%` }}
                 />
-                <div className="grid grid-cols-2 gap-3">
-                    <Input
-                        value={data.policyNumber}
-                        onChange={(e) => onChange({ ...data, policyNumber: e.target.value })}
-                        placeholder="Policy #"
-                        className="h-9 text-sm font-mono"
-                    />
-                    <Input
-                        type="date"
-                        value={data.expiryDate}
-                        onChange={(e) => onChange({ ...data, expiryDate: e.target.value })}
-                        className="h-9 text-sm font-mono"
-                    />
-                </div>
-
-                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                    <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
-                    <span className="font-bold text-sky-600 text-lg">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
-                </div>
-            </CardContent>
-        </Card>
-    )
+             </div>
+             <span className="font-bold text-sky-600 text-sm">
+                {(data.estimatedCoverage * 100).toFixed(0)}%
+             </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 

@@ -1346,6 +1346,18 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
         }).filter(Boolean) as Array<{ id: string; label: string; tests: LabTest[] }>;
     }, [formData.selectedIntents]);
 
+    const filteredTests = useMemo(() => {
+        if (!testSearchQuery) return [];
+        const lowerQuery = testSearchQuery.toLowerCase();
+        
+        return labTestsData.filter(test => 
+            test.name.toLowerCase().includes(lowerQuery) || 
+            test.id.toLowerCase().includes(lowerQuery) ||
+            (test.description && test.description.toLowerCase().includes(lowerQuery))
+        );
+    }, [testSearchQuery]);
+
+
     // Helper to get color styles based on intent ID (matching your screenshots)
     const getIntentStyles = (id: string) => {
         switch (id) {

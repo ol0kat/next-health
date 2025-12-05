@@ -61,6 +61,7 @@ import {
   Users,
   Video,
   Wallet,
+  X,
   Wind,
   Zap,
 } from "lucide-react";

@@ -88,16 +88,7 @@ interface MedicalIntent {
     visualPrompts: VisualPrompt[];
 }
 
-// --- 1. TYPES ---
-export interface PrivateInsuranceData {
-  id: string;
-  provider: string;
-  policyNumber: string;
-  expiryDate: string;
-  frontImg: string | null;
-  backImg: string | null;
-  estimatedCoverage: number;
-}
+
 
 // --- MOCK DATA ---
 const labTestsData: LabTest[] = [
@@ -624,7 +615,19 @@ export function FinancialInfoCard({ data, setData }: any) {
 }
 
 
-// --- 2. PARENT MANAGER (The Container) ---
+
+// --- TYPES ---
+export interface PrivateInsuranceData {
+  id: string
+  provider: string
+  policyNumber: string
+  expiryDate: string
+  frontImg: string | null
+  backImg: string | null
+  estimatedCoverage: number
+}
+
+// --- PARENT MANAGER COMPONENT ---
 export function PrivateInsuranceManager() {
   // Start with 1 empty card
   const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
@@ -637,34 +640,31 @@ export function PrivateInsuranceManager() {
       backImg: null,
       estimatedCoverage: 0.0,
     }
-  ]);
+  ])
 
   // Logic to add a NEW card to the list
   const addInsurance = () => {
     const newCard: PrivateInsuranceData = {
-      id: `new-${Date.now()}`, // Unique ID based on timestamp
+      id: `new-${Date.now()}`, // Unique ID
       provider: "",
       policyNumber: "",
       expiryDate: "",
       frontImg: null,
       backImg: null,
       estimatedCoverage: 0.0,
-    };
-    
-    // This adds the new card to the END of the array
-    // The previous cards (the scanned ones) stay above it
-    setInsurances((prev) => [...prev, newCard]);
-  };
+    }
+    setInsurances((prev) => [...prev, newCard])
+  }
 
   const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
     setInsurances((prev) =>
       prev.map((item) => (item.id === id ? updatedData : item))
-    );
-  };
+    )
+  }
 
   const removeInsurance = (id: string) => {
-    setInsurances((prev) => prev.filter((item) => item.id !== id));
-  };
+    setInsurances((prev) => prev.filter((item) => item.id !== id))
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -678,7 +678,7 @@ export function PrivateInsuranceManager() {
       <div className="flex flex-col gap-6">
         {insurances.map((insurance, index) => (
           <div key={insurance.id} className="relative">
-            {/* Visual connector line between cards if multiple exist (optional styling) */}
+            {/* Visual connector line between cards */}
             {index !== insurances.length - 1 && (
                <div className="absolute left-6 bottom-[-24px] w-0.5 h-6 bg-slate-200 z-0" />
             )}
@@ -695,7 +695,6 @@ export function PrivateInsuranceManager() {
       </div>
 
       {/* --- THE ADD BUTTON --- */}
-      {/* This renders BELOW the list. Clicking it adds a new item to the map above. */}
       <Button
         variant="outline"
         onClick={addInsurance}
@@ -705,88 +704,10 @@ export function PrivateInsuranceManager() {
         <span className="font-semibold">Add Another Policy</span>
       </Button>
     </div>
-  );
+  )
 }
 
-
-  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
-    {
-      id: "init-" + Math.random().toString(36).substr(2, 9),
-      provider: "",
-      policyNumber: "",
-      expiryDate: "",
-      frontImg: null,
-      backImg: null,
-      estimatedCoverage: 0.0,
-    },
-  ]);
-
-  // Add a new empty card
-  const addInsurance = () => {
-    const newCard: PrivateInsuranceData = {
-      id: "new-" + Math.random().toString(36).substr(2, 9),
-      provider: "",
-      policyNumber: "",
-      expiryDate: "",
-      frontImg: null,
-      backImg: null,
-      estimatedCoverage: 0.0,
-    };
-    setInsurances([...insurances, newCard]);
-  };
-
-  // Update a specific card by ID
-  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
-    setInsurances((prev) =>
-      prev.map((item) => (item.id === id ? updatedData : item))
-    );
-  };
-
-  // Remove a specific card by ID
-  const removeInsurance = (id: string) => {
-    setInsurances((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  return (
-    <div className="w-full space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">
-          Private Insurance Policies ({insurances.length})
-        </h3>
-      </div>
-
-      <div className="space-y-4">
-        {insurances.map((insurance) => (
-          <PrivateInsuranceCard
-            key={insurance.id}
-            data={insurance}
-            canDelete={insurances.length > 0} // Allow deleting even the last one if you want, or change to > 1
-            onChange={(newData) => updateInsurance(insurance.id, newData)}
-            onDelete={() => removeInsurance(insurance.id)}
-          />
-        ))}
-      </div>
-
-      {/* Add Button */}
-      <Button
-        variant="outline"
-        onClick={addInsurance}
-        className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 transition-all"
-      >
-        <Plus className="mr-2 h-4 w-4" /> Add Another Policy
-      </Button>
-    </div>
-  );
-}
-
-interface CardProps {
-  data: PrivateInsuranceData;
-  onChange: (d: PrivateInsuranceData) => void;
-  onDelete: () => void;
-  canDelete: boolean;
-}
-
-
+// --- CHILD CARD COMPONENT ---
 function PrivateInsuranceCard({
   data,
   index,
@@ -803,22 +724,21 @@ function PrivateInsuranceCard({
   const { toast } = useToast()
   const [isScanning, setIsScanning] = useState(false)
 
-  // Simulation of scanning
   const handleScanCard = () => {
     if(data.frontImg) return; 
 
-    setIsScanning(true);
+    setIsScanning(true)
     setTimeout(() => {
-      setIsScanning(false);
+      setIsScanning(false)
       onChange({
         ...data,
         provider: "Bao Viet Insurance",
-        policyNumber: `BV-8899-${index + 1}X`, // Just to make them look different
+        policyNumber: `BV-8899-${index + 1}X`,
         expiryDate: "2025-12-31",
         frontImg: "captured-hash",
         backImg: "captured-hash",
         estimatedCoverage: 0.8
-      });
+      })
       toast({ title: "Scan Complete", description: "Policy details updated." })
     }, 1500)
   }
@@ -844,7 +764,6 @@ function PrivateInsuranceCard({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {/* Images */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleScanCard}
@@ -889,7 +808,6 @@ function PrivateInsuranceCard({
           </button>
         </div>
 
-        {/* Inputs */}
         <Input
           value={data.provider}
           onChange={(e) => onChange({ ...data, provider: e.target.value })}
@@ -914,11 +832,9 @@ function PrivateInsuranceCard({
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-between items-center pt-2 border-t border-slate-100">
             <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
             <div className="flex items-center gap-2">
-                {/* Visual Progress Bar */}
                 <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                     <div 
                         className="h-full bg-sky-500" 

@@ -502,13 +502,42 @@ function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuran
 }
 
 // --- COMPONENT: RELATED PARTIES ---
-function RelatedPartiesCard() {
+export function RelatedPartiesCard() {
     const { toast } = useToast()
-    const [parties, setParties] = useState<any[]>([])
     const [scanRelativeStep, setScanRelativeStep] = useState<"idle" | "scanning">("idle")
+
+    // Initial state mocked to match your screenshot
+    const [parties, setParties] = useState<any[]>([
+        { 
+            id: '1', 
+            name: "NGUYỄN THỊ MAI", 
+            relation: "Wife", 
+            roleTitle: "SPOUSE", 
+            phone: "0909111222", 
+            type: "adult",
+            roles: { isEmergency: true, isGuardian: false, isPayer: true } 
+        },
+        { 
+            id: '2', 
+            name: "TRẦN MAI ANH", 
+            relation: "Daughter", 
+            roleTitle: "CHILD", 
+            phone: "N/A", 
+            type: "child",
+            roles: { isEmergency: false, isGuardian: false, isPayer: false } 
+        }
+    ])
     
     const handleManualRelative = () => { 
-        const newPerson = { id: `rel-m-${Math.random()}`, name: "NEW RELATED PARTY", relation: "other", phone: "", citizenId: "", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; 
+        const newPerson = { 
+            id: `rel-m-${Math.random()}`, 
+            name: "NEW PERSON", 
+            relation: "Relative", 
+            roleTitle: "OTHER",
+            phone: "N/A", 
+            type: "adult",
+            roles: { isEmergency: false, isGuardian: false, isPayer: false } 
+        }; 
         setParties(prev => [...prev, newPerson]) 
     }
     
@@ -516,26 +545,136 @@ function RelatedPartiesCard() {
         setScanRelativeStep("scanning"); 
         setTimeout(() => { 
             setScanRelativeStep("idle"); 
-            const newPerson = { id: `rel-${Math.random()}`, name: "TRẦN MAI ANH", relation: "child", phone: "N/A", citizenId: "0792...", roles: { isEmergency: false, isGuardian: false, isPayer: false } }; 
+            const newPerson = { 
+                id: `rel-${Math.random()}`, 
+                name: "SCANNED ID NAME", 
+                relation: "Sibling", 
+                roleTitle: "BROTHER",
+                phone: "0908...", 
+                type: "adult",
+                roles: { isEmergency: false, isGuardian: false, isPayer: false } 
+            }; 
             setParties(prev => [...prev, newPerson]); 
             toast({ title: "Identity Linked", description: `Added ${newPerson.name}.` }) 
         }, 1500) 
     }
     
-    const toggleRole = (id: string, role: string) => { setParties(prev => prev.map(p => { if (p.id !== id) return p; return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } } })) }
-    const updatePartyName = (id: string, name: string) => setParties(prev => prev.map(p => p.id === id ? { ...p, name } : p))
+    const toggleRole = (id: string, role: string) => { 
+        setParties(prev => prev.map(p => { 
+            if (p.id !== id) return p; 
+            return { ...p, roles: { ...p.roles, [role]: !p.roles[role] } } 
+        })) 
+    }
+
+    const removeParty = (id: string) => {
+        setParties(prev => prev.filter(p => p.id !== id));
+    }
     
     return ( 
-        <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white">
+        <Card className="border-t-4 border-t-amber-500 shadow-sm bg-white w-full">
             <CardHeader className="pb-3 border-b border-slate-50 flex flex-row items-center justify-between">
-                <CardTitle className="text-sm uppercase text-amber-600 flex items-center gap-2"><Users className="h-4 w-4"/> Related Parties & Emergency</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase text-amber-600 flex items-center gap-2">
+                    <Users className="h-4 w-4"/> Related Parties & Emergency
+                </CardTitle>
                 <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={handleManualRelative} className="h-7 text-xs gap-2"><Plus className="h-3 w-3"/> Manual</Button>
-                    <Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-7 text-xs gap-2">{scanRelativeStep === 'scanning' ? <Loader2 className="h-3 w-3 animate-spin"/> : <ScanLine className="h-3 w-3"/>} Scan ID</Button>
+                    <Button size="sm" variant="outline" onClick={handleManualRelative} className="h-8 text-xs font-semibold text-slate-700 border-slate-300 gap-2">
+                        <Plus className="h-3.5 w-3.5"/> Manual
+                    </Button>
+                    <Button size="sm" onClick={handleScanRelative} disabled={scanRelativeStep === 'scanning'} className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs font-semibold gap-2">
+                        {scanRelativeStep === 'scanning' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ScanLine className="h-3.5 w-3.5"/>} 
+                        Scan Relative ID
+                    </Button>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                {parties.length === 0 ? (<div className="p-6 text-center text-slate-400 text-sm italic">No related parties linked yet.</div>) : (<div className="divide-y divide-slate-100">{parties.map(party => (<div key={party.id} className="p-3 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50"><div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-xs">{party.name.charAt(0)}</div><Input className="h-7 text-sm font-bold border-none p-0 focus-visible:ring-0 bg-transparent w-40" value={party.name} onChange={(e) => updatePartyName(party.id, e.target.value)} /></div><div className="flex gap-2"><button onClick={() => toggleRole(party.id, 'isEmergency')} className={cn("px-2 py-1 rounded border text-[10px] font-bold flex items-center gap-1", party.roles.isEmergency ? "bg-red-50 text-red-700 border-red-200" : "bg-white text-slate-400")}>{party.roles.isEmergency && <Siren className="h-3 w-3"/>} Emergency</button></div></div>))}</div>)}
+                {parties.length === 0 ? (
+                    <div className="p-10 text-center text-slate-400 text-sm italic">No related parties linked yet.</div>
+                ) : (
+                    <div className="divide-y divide-slate-100">
+                        {parties.map(party => (
+                            <div key={party.id} className="p-4 flex flex-col xl:flex-row gap-4 xl:items-center justify-between hover:bg-slate-50 transition-colors">
+                                
+                                {/* Left Side: Avatar & Info */}
+                                <div className="flex items-start gap-4">
+                                    <div className={cn(
+                                        "h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 mt-1",
+                                        party.type === 'child' ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"
+                                    )}>
+                                        {party.type === 'child' ? <Baby className="h-6 w-6" /> : party.name.charAt(0)}
+                                    </div>
+                                    
+                                    <div className="flex flex-col">
+                                        <div className="text-sm font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                                            {party.name} 
+                                            <span className="text-slate-500 text-xs font-semibold normal-case">({party.relation})</span>
+                                        </div>
+                                        <div className="text-[11px] font-semibold text-slate-500 mt-0.5 uppercase tracking-wide">
+                                            {party.roleTitle} <span className="mx-1">•</span> {party.phone}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Role Toggles & Actions */}
+                                <div className="flex flex-wrap items-center gap-2 pl-14 xl:pl-0">
+                                    
+                                    {/* Emergency Contact Toggle */}
+                                    <button 
+                                        onClick={() => toggleRole(party.id, 'isEmergency')} 
+                                        className={cn(
+                                            "px-3 py-1.5 rounded border text-[11px] font-bold flex items-center gap-1.5 transition-all", 
+                                            party.roles.isEmergency 
+                                                ? "bg-red-50 text-red-600 border-red-200" 
+                                                : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
+                                        )}
+                                    >
+                                        <Siren className={cn("h-3.5 w-3.5", party.roles.isEmergency ? "fill-red-100" : "")}/> 
+                                        Emergency Contact
+                                        {party.roles.isEmergency && <span className="ml-1 text-red-500">✓</span>}
+                                    </button>
+
+                                    {/* Legal Guardian Toggle */}
+                                    <button 
+                                        onClick={() => toggleRole(party.id, 'isGuardian')} 
+                                        className={cn(
+                                            "px-3 py-1.5 rounded border text-[11px] font-bold flex items-center gap-1.5 transition-all", 
+                                            party.roles.isGuardian 
+                                                ? "bg-blue-50 text-blue-600 border-blue-200" 
+                                                : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
+                                        )}
+                                    >
+                                        <FileSignature className="h-3.5 w-3.5"/> 
+                                        Legal Guardian
+                                    </button>
+
+                                    {/* Bill Payer Toggle */}
+                                    <button 
+                                        onClick={() => toggleRole(party.id, 'isPayer')} 
+                                        className={cn(
+                                            "px-3 py-1.5 rounded border text-[11px] font-bold flex items-center gap-1.5 transition-all", 
+                                            party.roles.isPayer 
+                                                ? "bg-emerald-50 text-emerald-600 border-emerald-200" 
+                                                : "bg-white text-slate-400 border-slate-200 hover:border-slate-300"
+                                        )}
+                                    >
+                                        <CreditCard className="h-3.5 w-3.5"/> 
+                                        Bill Payer
+                                    </button>
+
+                                    {/* Divider */}
+                                    <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+
+                                    {/* Delete Action */}
+                                    <button 
+                                        onClick={() => removeParty(party.id)}
+                                        className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors"
+                                    >
+                                        <Trash2 className="h-4 w-4"/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </CardContent>
         </Card> 
     )

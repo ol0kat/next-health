@@ -1433,28 +1433,6 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                 </CardContent>
                             </Card>
 
-                            {/* 3. Financial Info */}
-                            <div className="md:col-span-1">
-                                <FinancialInfoCard data={financialData} setData={setFinancialData} />
-                            </div>
-
-                            {/* 4. Private Insurance */}
-                            <div className="md:col-span-1">
-                                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
-                            </div>
-
-                            {/* 5. Related Parties */}
-                            <div className="md:col-span-2">
-                                <RelatedPartiesCard />
-                            </div>
-
-
-                            {/* 7. Vital Signs */}
-                            <div className="md:col-span-2"><VitalSignsMonitor nurseName="Lan" /></div>
-
-                            {/* 8. Visual Observations */}
-                            <div className="md:col-span-2"><VisualObservationCard medicalIntents={formData.selectedIntents} /></div>
-
                             {/* 9. Order Entry (Fixed Search UI & Recs) */}
                             <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
                                 <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4" /> Order Entry</CardTitle></CardHeader>
@@ -1508,6 +1486,30 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                     )}
                                 </CardContent>
                             </Card>
+
+
+                            {/* 3. Financial Info */}
+                            <div className="md:col-span-1">
+                                <FinancialInfoCard data={financialData} setData={setFinancialData} />
+                            </div>
+
+                            {/* 4. Private Insurance */}
+                            <div className="md:col-span-1">
+                                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
+                            </div>
+
+                            {/* 5. Related Parties */}
+                            <div className="md:col-span-2">
+                                <RelatedPartiesCard />
+                            </div>
+
+
+                            {/* 7. Vital Signs */}
+                            <div className="md:col-span-2"><VitalSignsMonitor nurseName="Lan" /></div>
+
+                            {/* 8. Visual Observations */}
+                            <div className="md:col-span-2"><VisualObservationCard medicalIntents={formData.selectedIntents} /></div>
+
 
                             {/* 10. Telehealth Dispatch */}
                             <div className="md:col-span-2">

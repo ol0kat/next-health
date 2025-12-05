@@ -69,6 +69,19 @@ const labTestsData: LabTest[] = [
   { id: "fsh", name: "FSH", price: 150000, category: "Hormones", sampleType: "Serum", turnaroundHours: 24, description: "Follicle Stimulating Hormone" },
 ]
 
+// --- UTILS: VIETQR PARSING LOGIC (CLIENT SIDE) ---
+
+const BANK_BIN_MAP: Record<string, string> = {
+    "970436": "vcb", // Vietcombank
+    "970407": "tcb", // Techcombank
+    "970415": "ctg", // VietinBank
+    "970418": "bidv", // BIDV
+    "970422": "mb",   // MB Bank
+    "970403": "stb",  // Sacombank
+    "970423": "tpb",  // TPBank
+    // Add more BINs as needed
+};
+
 
 
 // --- MOCK DATA: 2025 REFORM STRUCTURE (34 Provinces, No Districts) ---
@@ -400,10 +413,89 @@ function DemographicsCard({ formData, setFormData, onCheckBHYT }: any) {
         </Card>
     )
 }
+
+// Simple EMVCo TLV Parser
+const parseVietQR = (qrString: string) => {
+    try {
+        let index = 0;
+        const result: any = {};
+
+        while (index < qrString.length) {
+            const id = qrString.substring(index, index + 2);
+            const length = parseInt(qrString.substring(index + 2, index + 4));
+            const value = qrString.substring(index + 4, index + 4 + length);
+
+            // ID 38 is the Merchant Account Information (The Payload)
+            if (id === "38") {
+                // Parse Sub-tags inside Tag 38
+                let subIndex = 0;
+                while (subIndex < value.length) {
+                    const subId = value.substring(subIndex, subIndex + 2);
+                    const subLen = parseInt(value.substring(subIndex + 2, subIndex + 4));
+                    const subVal = value.substring(subIndex + 4, subIndex + 4 + subLen);
+
+                    // Sub-tag 01 contains BIN and Account Number
+                    if (subId === "01") {
+                         let infoIndex = 0;
+                         while (infoIndex < subVal.length) {
+                             const infoId = subVal.substring(infoIndex, infoIndex + 2);
+                             const infoLen = parseInt(subVal.substring(infoIndex + 2, infoIndex + 4));
+                             const infoVal = subVal.substring(infoIndex + 4, infoIndex + 4 + infoLen);
+
+                             if (infoId === "00") result.bin = infoVal; // Bank BIN
+                             if (infoId === "01") result.accountNumber = infoVal; // Account No
+                             
+                             infoIndex += 4 + infoLen;
+                         }
+                    }
+                    subIndex += 4 + subLen;
+                }
+            }
+            index += 4 + length;
+        }
+        return result;
+    } catch (e) {
+        console.error("Invalid QR format", e);
+        return null;
+    }
+};
+
 // --- COMPONENT: FINANCIAL INFO ---
-function FinancialInfoCard({ data, setData }: any) {
+
+export function FinancialInfoCard({ data, setData }: any) {
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanInput, setScanInput] = useState("");
+    const [scanError, setScanError] = useState("");
+
+    const handleSimulateScan = () => {
+        setScanError("");
+        const parsed = parseVietQR(scanInput);
+
+        if (parsed && parsed.bin && parsed.accountNumber) {
+            const bankCode = BANK_BIN_MAP[parsed.bin];
+            
+            if (bankCode) {
+                // Update Parent State
+                setData({
+                    ...data,
+                    bankName: bankCode,
+                    bankAccount: parsed.accountNumber
+                });
+                setIsScanning(false); // Close modal
+                setScanInput(""); // Reset input
+            } else {
+                setScanError(`Bank BIN ${parsed.bin} not supported in this demo.`);
+            }
+        } else {
+            setScanError("Could not find Bank/Account info in this string.");
+        }
+    };
+
+    // Sample string from your prompt for easy testing
+    const sampleString = "00020101021138570010A00000072701270006970436011305010001005230208QRIBFTTA53037045802VN630462A5";
+
     return (
-        <Card className="border-t-4 border-t-emerald-600 shadow-sm h-full">
+        <Card className="border-t-4 border-t-emerald-600 shadow-sm h-full relative overflow-hidden">
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm uppercase text-emerald-700 flex items-center gap-2">
                     <Wallet className="h-4 w-4"/> Financial & Refund
@@ -434,9 +526,28 @@ function FinancialInfoCard({ data, setData }: any) {
                     </TabsContent>
                     
                     <TabsContent value="reimbursement" className="space-y-3">
+                        {/* Scan Button Trigger */}
+                        <Button 
+                            variant="secondary" 
+                            className="w-full h-8 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                            onClick={() => setIsScanning(true)}
+                        >
+                            <QrCode className="h-3 w-3 mr-2"/> Scan VietQR Code
+                        </Button>
+
                         <div className="space-y-1">
                             <Label className="text-xs text-slate-500">Bank Name</Label>
-                            <Select onValueChange={(v) => setData({...data, bankName: v})}><SelectTrigger className="h-8"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent><SelectItem value="vcb">Vietcombank</SelectItem><SelectItem value="tcb">Techcombank</SelectItem></SelectContent></Select>
+                            <Select value={data.bankName} onValueChange={(v) => setData({...data, bankName: v})}>
+                                <SelectTrigger className="h-8"><SelectValue placeholder="Select Bank" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="vcb">Vietcombank</SelectItem>
+                                    <SelectItem value="tcb">Techcombank</SelectItem>
+                                    <SelectItem value="ctg">VietinBank</SelectItem>
+                                    <SelectItem value="bidv">BIDV</SelectItem>
+                                    <SelectItem value="mb">MB Bank</SelectItem>
+                                    <SelectItem value="tpb">TPBank</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-1">
                             <Label className="text-xs text-slate-500">Account No.</Label>
@@ -445,9 +556,44 @@ function FinancialInfoCard({ data, setData }: any) {
                     </TabsContent>
                 </Tabs>
             </CardContent>
+
+            {/* --- SIMULATED SCANNER OVERLAY --- */}
+            {isScanning && (
+                <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-10 flex flex-col p-4 animate-in fade-in duration-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-bold flex items-center gap-2"><QrCode className="h-4 w-4"/> Simulator</h3>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setIsScanning(false)}><X className="h-4 w-4"/></Button>
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col gap-3">
+                        <div className="text-[11px] text-slate-500">
+                            Since there is no camera, paste the RAW string below.
+                        </div>
+                        
+                        <textarea 
+                            className="w-full h-24 text-[10px] p-2 border rounded bg-slate-50 font-mono resize-none"
+                            placeholder="Paste VietQR String here..."
+                            value={scanInput}
+                            onChange={(e) => setScanInput(e.target.value)}
+                        />
+
+                        {scanError && <div className="text-[10px] text-red-500 font-medium">{scanError}</div>}
+
+                        <div className="grid grid-cols-2 gap-2 mt-auto">
+                            <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setScanInput(sampleString)}>
+                                Paste Sample
+                            </Button>
+                            <Button size="sm" className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700" onClick={handleSimulateScan}>
+                                Process <ArrowRight className="h-3 w-3 ml-1"/>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Card>
     )
 }
+
 
 // --- TYPES ---
 export interface PrivateInsuranceData {

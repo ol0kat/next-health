@@ -14,24 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-    User, QrCode, Search, Loader2, X, CheckCircle2,
-    Clock, History, Lock, Unlock, ShieldCheck,
-    ShoppingCart, FileText, Activity, Save, Beaker,
-    FileSignature, Sparkles, Stethoscope,
-    PlusCircle, Edit2, Thermometer, Wind, HeartPulse, Scale,
-    Camera, Image as ImageIcon, Eye, AlertTriangle,
-    Users, Trash2, Phone, Plus, ScanLine, CreditCard, Baby, Siren,
-    Shield, RefreshCw, Video, CalendarClock, Zap, FlaskConical,
-    Globe, Filter, Mail, MapPin, Wallet, Check,
-    Wallet,
-    CreditCard,
-    Trash2,
-    Plus,
-    QrCode,
-    X,
-    ArrowRight,
-    CheckCircle2
-} from 'lucide-react';
+    AlertTriangle, ArrowRight, Baby, CalendarClock, CreditCard,
+    Eye, Filter, FlaskConical, Globe, Mail, MapPin, Phone,
+    Plus, RefreshCw, ScanLine, Shield, Siren, Trash2,
+    Video, Wallet, Zap, Users, Check
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"

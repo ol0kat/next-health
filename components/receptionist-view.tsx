@@ -460,66 +460,7 @@ export interface PrivateInsuranceData {
   estimatedCoverage: number;
 }
 
-// --- PARENT COMPONENT: MANAGER ---
-export function PrivateInsuranceManager() {
-  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([]);
 
-  // 1. Add a new empty insurance card
-  const addInsurance = () => {
-    const newCard: PrivateInsuranceData = {
-      id: Math.random().toString(36).substr(2, 9), // Simple unique ID
-      provider: "",
-      policyNumber: "",
-      expiryDate: "",
-      frontImg: null,
-      backImg: null,
-      estimatedCoverage: 0.0,
-    };
-    setInsurances([...insurances, newCard]);
-  };
-
-  // 2. Update a specific card by ID
-  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
-    setInsurances((prev) => 
-      prev.map((item) => (item.id === id ? updatedData : item))
-    );
-  };
-
-  // 3. Delete a specific card by ID
-  const removeInsurance = (id: string) => {
-    setInsurances((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  return (
-    <div className="space-y-4 w-full">
-      {/* Header & Add Button */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">Private Insurance</h3>
-        <Button onClick={addInsurance} size="sm" variant="outline" className="gap-2 h-8 text-xs">
-          <Plus className="h-3 w-3" /> Add Insurance
-        </Button>
-      </div>
-
-      {/* List of Cards */}
-      <div className="space-y-4">
-        {insurances.length === 0 && (
-          <div className="text-center p-6 border-2 border-dashed rounded-lg border-slate-200 text-slate-400 text-xs">
-            No private insurance added yet.
-          </div>
-        )}
-
-        {insurances.map((insurance) => (
-          <PrivateInsuranceCard 
-            key={insurance.id} 
-            data={insurance} 
-            onChange={(newData) => updateInsurance(insurance.id, newData)}
-            onDelete={() => removeInsurance(insurance.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // --- TYPES ---
 export interface PrivateInsuranceData {

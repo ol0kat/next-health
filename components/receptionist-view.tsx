@@ -510,6 +510,9 @@ export function FinancialInfoCard({ data, setData }: any) {
 
     const handleSimulateScan = () => {
         setScanError("");
+        
+        // Ensure you have these utility functions available in your project
+        // If not, this logic will need to be adjusted to your specific parser
         const parsed = parseVietQR(scanInput);
 
         if (parsed && parsed.bin && parsed.accountNumber) {
@@ -542,60 +545,43 @@ export function FinancialInfoCard({ data, setData }: any) {
                     <Wallet className="h-4 w-4" /> Financial & Refund
                 </CardTitle>
             </CardHeader>
+            
             <CardContent>
-                <Tabs defaultValue="payment_method" className="w-full">
-                    <TabsList className="w-full grid grid-cols-2 mb-4 h-8">
-                        <TabsTrigger value="payment_method" className="text-xs">Card on File</TabsTrigger>
-                        <TabsTrigger value="reimbursement" className="text-xs">Bank Refund</TabsTrigger>
-                    </TabsList>
+                <div className="space-y-3">
+                    {/* Scan Button Trigger */}
+                    <Button
+                        variant="secondary"
+                        className="w-full h-8 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+                        onClick={() => setIsScanning(true)}
+                    >
+                        <QrCode className="h-3 w-3 mr-2" /> Scan VietQR Code
+                    </Button>
 
-                    <TabsContent value="payment_method" className="space-y-4">
-                        <div className="bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4 flex flex-col items-center justify-center text-center">
-                            {data.cardLast4 ? (
-                                <div className="flex items-center gap-3 w-full">
-                                    <div className="h-10 w-10 bg-emerald-100 rounded flex items-center justify-center text-emerald-600"><CreditCard className="h-6 w-6" /></div>
-                                    <div className="text-left flex-1"><div className="font-bold text-slate-800 text-sm">Visa •••• {data.cardLast4}</div><div className="text-[10px] text-slate-500">Exp {data.cardExpiry}</div></div>
-                                    <Button variant="ghost" size="sm" className="text-red-500 h-6 w-6 p-0" onClick={() => setData({ ...data, cardLast4: "" })}><Trash2 className="h-3 w-3" /></Button>
-                                </div>
-                            ) : (
-                                <>
-                                    <p className="text-[10px] text-slate-500 mb-2">No payment method.</p>
-                                    <Button variant="outline" size="sm" onClick={() => setData({ ...data, cardLast4: "4242", cardExpiry: "12/25" })} className="h-7 text-xs"><Plus className="h-3 w-3 mr-2" /> Add Card</Button>
-                                </>
-                            )}
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="reimbursement" className="space-y-3">
-                        {/* Scan Button Trigger */}
-                        <Button
-                            variant="secondary"
-                            className="w-full h-8 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
-                            onClick={() => setIsScanning(true)}
-                        >
-                            <QrCode className="h-3 w-3 mr-2" /> Scan VietQR Code
-                        </Button>
-
-                        <div className="space-y-1">
-                            <Label className="text-xs text-slate-500">Bank Name</Label>
-                            <Select value={data.bankName} onValueChange={(v) => setData({ ...data, bankName: v })}>
-                                <SelectTrigger className="h-8"><SelectValue placeholder="Select Bank" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="vcb">Vietcombank</SelectItem>
-                                    <SelectItem value="tcb">Techcombank</SelectItem>
-                                    <SelectItem value="ctg">VietinBank</SelectItem>
-                                    <SelectItem value="bidv">BIDV</SelectItem>
-                                    <SelectItem value="mb">MB Bank</SelectItem>
-                                    <SelectItem value="tpb">TPBank</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs text-slate-500">Account No.</Label>
-                            <Input placeholder="0071000..." value={data.bankAccount} onChange={e => setData({ ...data, bankAccount: e.target.value })} className="h-8" />
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                    <div className="space-y-1">
+                        <Label className="text-xs text-slate-500">Bank Name</Label>
+                        <Select value={data.bankName} onValueChange={(v) => setData({ ...data, bankName: v })}>
+                            <SelectTrigger className="h-8"><SelectValue placeholder="Select Bank" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="vcb">Vietcombank</SelectItem>
+                                <SelectItem value="tcb">Techcombank</SelectItem>
+                                <SelectItem value="ctg">VietinBank</SelectItem>
+                                <SelectItem value="bidv">BIDV</SelectItem>
+                                <SelectItem value="mb">MB Bank</SelectItem>
+                                <SelectItem value="tpb">TPBank</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    
+                    <div className="space-y-1">
+                        <Label className="text-xs text-slate-500">Account No.</Label>
+                        <Input 
+                            placeholder="0071000..." 
+                            value={data.bankAccount} 
+                            onChange={e => setData({ ...data, bankAccount: e.target.value })} 
+                            className="h-8" 
+                        />
+                    </div>
+                </div>
             </CardContent>
 
             {/* --- SIMULATED SCANNER OVERLAY --- */}

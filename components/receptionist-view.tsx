@@ -521,15 +521,101 @@ export function PrivateInsuranceManager() {
   );
 }
 
-// --- CHILD COMPONENT: INDIVIDUAL CARD ---
+// --- TYPES ---
+export interface PrivateInsuranceData {
+  id: string; // Unique ID needed for the list
+  provider: string;
+  policyNumber: string;
+  expiryDate: string;
+  frontImg: string | null;
+  backImg: string | null;
+  estimatedCoverage: number;
+}
+
+// --- MAIN COMPONENT (Use this in your page) ---
+export default function PrivateInsuranceManager() {
+  // Start with 1 empty card by default
+  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
+    {
+      id: "init-1",
+      provider: "",
+      policyNumber: "",
+      expiryDate: "",
+      frontImg: null,
+      backImg: null,
+      estimatedCoverage: 0.0,
+    }
+  ]);
+
+  // Add a new empty card to the list
+  const addInsurance = () => {
+    const newCard: PrivateInsuranceData = {
+      id: Date.now().toString(), // Unique ID based on timestamp
+      provider: "",
+      policyNumber: "",
+      expiryDate: "",
+      frontImg: null,
+      backImg: null,
+      estimatedCoverage: 0.0,
+    };
+    setInsurances([...insurances, newCard]);
+  };
+
+  // Update a specific card's data
+  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
+    setInsurances((prev) => 
+      prev.map((item) => (item.id === id ? updatedData : item))
+    );
+  };
+
+  // Remove a specific card
+  const removeInsurance = (id: string) => {
+    setInsurances((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-slate-700">Private Insurance</h3>
+      </div>
+
+      {/* RENDER THE LIST OF CARDS */}
+      <div className="space-y-4">
+        {insurances.map((insurance, index) => (
+          <PrivateInsuranceCard 
+            key={insurance.id} 
+            data={insurance} 
+            // Only allow deleting if there is more than 1 card (optional)
+            canDelete={insurances.length > 0} 
+            onChange={(newData) => updateInsurance(insurance.id, newData)}
+            onDelete={() => removeInsurance(insurance.id)}
+          />
+        ))}
+      </div>
+
+      {/* ADD BUTTON - PLACED AT THE BOTTOM */}
+      <Button 
+        variant="outline" 
+        className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 mt-4" 
+        onClick={addInsurance}
+      >
+        <Plus className="mr-2 h-4 w-4" /> Add Another Policy
+      </Button>
+    </div>
+  );
+}
+
+// --- SUB-COMPONENT: SINGLE CARD ---
 function PrivateInsuranceCard({ 
   data, 
   onChange, 
-  onDelete 
+  onDelete,
+  canDelete
 }: { 
   data: PrivateInsuranceData, 
   onChange: (d: PrivateInsuranceData) => void,
-  onDelete: () => void
+  onDelete: () => void,
+  canDelete: boolean
 }) {
     const { toast } = useToast()
     const [isScanning, setIsScanning] = useState(false)
@@ -538,7 +624,7 @@ function PrivateInsuranceCard({
         setIsScanning(true); 
         setTimeout(() => { 
             setIsScanning(false); 
-            // Update specific fields on scan success
+            // Mock scan result
             onChange({ 
                 ...data, 
                 provider: "baoviet", 
@@ -548,90 +634,107 @@ function PrivateInsuranceCard({
                 backImg: "captured", 
                 estimatedCoverage: 0.8 
             }); 
-            toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) 
-        }, 2000) 
+            toast({ title: "Card Scanned", description: "Policy details detected." }) 
+        }, 1500) 
     }
     
     return ( 
-        <Card className="border-t-4 border-t-sky-500 bg-white shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
+        <Card className="group relative border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
                     <Shield className="h-4 w-4"/> 
                     {data.provider ? data.provider : "New Policy"}
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                
+                {/* Delete Button */}
+                {canDelete && (
                     <Button 
                         size="icon" 
                         variant="ghost" 
-                        className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50" 
+                        className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50" 
                         onClick={onDelete}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
-                </div>
+                )}
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-                {/* Image Upload Area */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Images */}
+                <div className="grid grid-cols-2 gap-3">
                     <button 
                         onClick={handleScanCard} 
-                        disabled={isScanning}
+                        disabled={isScanning || !!data.frontImg}
                         className={cn(
-                            "h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors", 
-                            data.frontImg ? "border-sky-500 bg-sky-50" : "border-slate-300 hover:bg-slate-50"
+                            "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all", 
+                            data.frontImg 
+                                ? "border-sky-500 bg-sky-50" 
+                                : "border-slate-300 hover:border-sky-400 hover:bg-slate-50"
                         )}
                     >
                         {isScanning ? (
-                            <span className="animate-pulse text-[9px] font-bold text-sky-500">SCANNING...</span>
+                            <span className="animate-pulse text-[10px] font-bold text-sky-500">SCANNING...</span>
                         ) : data.frontImg ? (
-                            <CheckCircle2 className="h-4 w-4 text-sky-500"/>
+                            <>
+                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1"/>
+                                <span className="text-[10px] uppercase font-bold text-sky-600">Front</span>
+                            </>
                         ) : (
-                            <Camera className="h-4 w-4 text-slate-400"/>
+                            <>
+                                <Camera className="h-5 w-5 text-slate-400 mb-1"/>
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Front</span>
+                            </>
                         )}
-                        {!isScanning && <span className="text-[9px] uppercase font-bold text-slate-500">Front</span>}
                     </button>
 
-                    <button className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
-                        {data.backImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
-                        <span className="text-[9px] uppercase font-bold text-slate-500">Back</span>
+                    <button className={cn(
+                        "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1", 
+                        data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300"
+                    )}>
+                        {data.backImg ? (
+                            <>
+                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1"/>
+                                <span className="text-[10px] uppercase font-bold text-sky-600">Back</span>
+                            </>
+                        ) : (
+                            <>
+                                <Camera className="h-5 w-5 text-slate-400 mb-1"/>
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Back</span>
+                            </>
+                        )}
                     </button>
                 </div>
 
-                {/* Form Fields */}
-                <div className="space-y-2">
+                {/* Fields */}
+                <Input 
+                    value={data.provider} 
+                    onChange={(e) => onChange({...data, provider: e.target.value})} 
+                    placeholder="Provider (e.g. Bao Viet)" 
+                    className="h-9 text-sm"
+                />
+                <div className="grid grid-cols-2 gap-3">
                     <Input 
-                        value={data.provider} 
-                        onChange={(e) => onChange({...data, provider: e.target.value})} 
-                        placeholder="Provider Name (e.g. Bao Viet)" 
-                        className="h-8 text-xs"
+                        value={data.policyNumber} 
+                        onChange={(e) => onChange({...data, policyNumber: e.target.value})} 
+                        placeholder="Policy #" 
+                        className="h-9 text-sm font-mono"
                     />
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input 
-                            value={data.policyNumber} 
-                            onChange={(e) => onChange({...data, policyNumber: e.target.value})} 
-                            placeholder="Policy #" 
-                            className="h-8 text-xs font-mono"
-                        />
-                        <Input 
-                            type="date" 
-                            value={data.expiryDate} 
-                            onChange={(e) => onChange({...data, expiryDate: e.target.value})} 
-                            className="h-8 text-xs font-mono"
-                        />
-                    </div>
+                    <Input 
+                        type="date" // Uses browser native date picker
+                        value={data.expiryDate} 
+                        onChange={(e) => onChange({...data, expiryDate: e.target.value})} 
+                        className="h-9 text-sm font-mono"
+                    />
                 </div>
 
-                {/* Footer Info */}
-                <div className="flex justify-between items-center bg-slate-50 -mx-4 -mb-4 px-4 py-2 border-t border-slate-100 mt-2">
-                    <span className="text-xs text-slate-500">Est. Coverage</span>
-                    <span className="font-bold text-sky-600 text-sm">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
+                {/* Footer Coverage */}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                    <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
+                    <span className="font-bold text-sky-600 text-lg">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
                 </div>
             </CardContent>
         </Card>
     )
 }
-
-
 // --- COMPONENT: RELATED PARTIES ---
 export function RelatedPartiesCard() {
     const { toast } = useToast()

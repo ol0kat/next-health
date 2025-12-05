@@ -20,7 +20,7 @@ import {
     Baby,
     Beaker,
     CalendarClock,
-    Calendar as CalendarIcon, 
+    Calendar as CalendarIcon,
     Camera,
     Check,
     CheckCircle2,
@@ -203,6 +203,17 @@ const doctorPool: Doctor[] = [
 ]
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+
+
+
+// Add this helper function inside your component
+const removeTest = (testId: string) => {
+    setSelectedTests(prev => prev.filter(t => t.id !== testId));
+}
+
+// Calculate total for the footer
+const totalPrice = selectedTests.reduce((sum, item) => sum + item.price, 0);
+
 
 // --- COMPONENT: IDENTITY VERIFICATION (UNIFIED FLOW) ---
 function IdentityVerificationCard({
@@ -618,237 +629,237 @@ export function FinancialInfoCard({ data, setData }: any) {
 
 // --- TYPES ---
 export interface PrivateInsuranceData {
-  id: string
-  provider: string
-  policyNumber: string
-  expiryDate: string
-  frontImg: string | null
-  backImg: string | null
-  estimatedCoverage: number
+    id: string
+    provider: string
+    policyNumber: string
+    expiryDate: string
+    frontImg: string | null
+    backImg: string | null
+    estimatedCoverage: number
 }
 
 // --- PARENT MANAGER COMPONENT ---
 export function PrivateInsuranceManager() {
-  // Start with 1 empty card
-  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
-    {
-      id: "init-1",
-      provider: "",
-      policyNumber: "",
-      expiryDate: "",
-      frontImg: null,
-      backImg: null,
-      estimatedCoverage: 0.0,
-    }
-  ])
+    // Start with 1 empty card
+    const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
+        {
+            id: "init-1",
+            provider: "",
+            policyNumber: "",
+            expiryDate: "",
+            frontImg: null,
+            backImg: null,
+            estimatedCoverage: 0.0,
+        }
+    ])
 
-  // Logic to add a NEW card to the list
-  const addInsurance = () => {
-    const newCard: PrivateInsuranceData = {
-      id: `new-${Date.now()}`, // Unique ID
-      provider: "",
-      policyNumber: "",
-      expiryDate: "",
-      frontImg: null,
-      backImg: null,
-      estimatedCoverage: 0.0,
+    // Logic to add a NEW card to the list
+    const addInsurance = () => {
+        const newCard: PrivateInsuranceData = {
+            id: `new-${Date.now()}`, // Unique ID
+            provider: "",
+            policyNumber: "",
+            expiryDate: "",
+            frontImg: null,
+            backImg: null,
+            estimatedCoverage: 0.0,
+        }
+        setInsurances((prev) => [...prev, newCard])
     }
-    setInsurances((prev) => [...prev, newCard])
-  }
 
-  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
-    setInsurances((prev) =>
-      prev.map((item) => (item.id === id ? updatedData : item))
+    const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
+        setInsurances((prev) =>
+            prev.map((item) => (item.id === id ? updatedData : item))
+        )
+    }
+
+    const removeInsurance = (id: string) => {
+        setInsurances((prev) => prev.filter((item) => item.id !== id))
+    }
+
+    return (
+        <div className="w-full space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-700">
+                    Private Insurance ({insurances.length})
+                </h3>
+            </div>
+
+            {/* --- THE LIST OF CARDS --- */}
+            <div className="flex flex-col gap-6">
+                {insurances.map((insurance, index) => (
+                    <div key={insurance.id} className="relative">
+                        {/* Visual connector line between cards */}
+                        {index !== insurances.length - 1 && (
+                            <div className="absolute left-6 bottom-[-24px] w-0.5 h-6 bg-slate-200 z-0" />
+                        )}
+
+                        <PrivateInsuranceCard
+                            data={insurance}
+                            index={index}
+                            canDelete={insurances.length > 0}
+                            onChange={(newData) => updateInsurance(insurance.id, newData)}
+                            onDelete={() => removeInsurance(insurance.id)}
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {/* --- THE ADD BUTTON --- */}
+            <Button
+                variant="outline"
+                onClick={addInsurance}
+                className="w-full h-16 border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:border-sky-500 hover:bg-sky-50 hover:text-sky-600 transition-all flex flex-col items-center justify-center gap-1"
+            >
+                <PlusCircle className="h-6 w-6" />
+                <span className="font-semibold">Add Another Policy</span>
+            </Button>
+        </div>
     )
-  }
-
-  const removeInsurance = (id: string) => {
-    setInsurances((prev) => prev.filter((item) => item.id !== id))
-  }
-
-  return (
-    <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-700">
-          Private Insurance ({insurances.length})
-        </h3>
-      </div>
-
-      {/* --- THE LIST OF CARDS --- */}
-      <div className="flex flex-col gap-6">
-        {insurances.map((insurance, index) => (
-          <div key={insurance.id} className="relative">
-            {/* Visual connector line between cards */}
-            {index !== insurances.length - 1 && (
-               <div className="absolute left-6 bottom-[-24px] w-0.5 h-6 bg-slate-200 z-0" />
-            )}
-            
-            <PrivateInsuranceCard
-              data={insurance}
-              index={index}
-              canDelete={insurances.length > 0} 
-              onChange={(newData) => updateInsurance(insurance.id, newData)}
-              onDelete={() => removeInsurance(insurance.id)}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* --- THE ADD BUTTON --- */}
-      <Button
-        variant="outline"
-        onClick={addInsurance}
-        className="w-full h-16 border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:border-sky-500 hover:bg-sky-50 hover:text-sky-600 transition-all flex flex-col items-center justify-center gap-1"
-      >
-        <PlusCircle className="h-6 w-6" />
-        <span className="font-semibold">Add Another Policy</span>
-      </Button>
-    </div>
-  )
 }
 
 // --- CHILD CARD COMPONENT ---
 function PrivateInsuranceCard({
-  data,
-  index,
-  onChange,
-  onDelete,
-  canDelete
+    data,
+    index,
+    onChange,
+    onDelete,
+    canDelete
 }: {
-  data: PrivateInsuranceData,
-  index: number,
-  onChange: (d: PrivateInsuranceData) => void,
-  onDelete: () => void,
-  canDelete: boolean
+    data: PrivateInsuranceData,
+    index: number,
+    onChange: (d: PrivateInsuranceData) => void,
+    onDelete: () => void,
+    canDelete: boolean
 }) {
-  const { toast } = useToast()
-  const [isScanning, setIsScanning] = useState(false)
+    const { toast } = useToast()
+    const [isScanning, setIsScanning] = useState(false)
 
-  const handleScanCard = () => {
-    if(data.frontImg) return; 
+    const handleScanCard = () => {
+        if (data.frontImg) return;
 
-    setIsScanning(true)
-    setTimeout(() => {
-      setIsScanning(false)
-      onChange({
-        ...data,
-        provider: "Bao Viet Insurance",
-        policyNumber: `BV-8899-${index + 1}X`,
-        expiryDate: "2025-12-31",
-        frontImg: "captured-hash",
-        backImg: "captured-hash",
-        estimatedCoverage: 0.8
-      })
-      toast({ title: "Scan Complete", description: "Policy details updated." })
-    }, 1500)
-  }
+        setIsScanning(true)
+        setTimeout(() => {
+            setIsScanning(false)
+            onChange({
+                ...data,
+                provider: "Bao Viet Insurance",
+                policyNumber: `BV-8899-${index + 1}X`,
+                expiryDate: "2025-12-31",
+                frontImg: "captured-hash",
+                backImg: "captured-hash",
+                estimatedCoverage: 0.8
+            })
+            toast({ title: "Scan Complete", description: "Policy details updated." })
+        }, 1500)
+    }
 
-  return (
-    <Card className="group relative z-10 border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
-      <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
-          <Shield className="h-4 w-4" />
-          {data.provider ? data.provider : `Policy #${index + 1}`}
-        </CardTitle>
+    return (
+        <Card className="group relative z-10 border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+                <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
+                    <Shield className="h-4 w-4" />
+                    {data.provider ? data.provider : `Policy #${index + 1}`}
+                </CardTitle>
 
-        {canDelete && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </CardHeader>
+                {canDelete && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
+                        onClick={onDelete}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
+            </CardHeader>
 
-      <CardContent className="p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={handleScanCard}
-            disabled={isScanning || !!data.frontImg}
-            className={cn(
-              "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all",
-              data.frontImg
-                ? "border-sky-500 bg-sky-50"
-                : "border-slate-300 hover:border-sky-400 hover:bg-slate-50"
-            )}
-          >
-            {isScanning ? (
-              <span className="animate-pulse text-[10px] font-bold text-sky-500">SCANNING...</span>
-            ) : data.frontImg ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
-                <span className="text-[10px] uppercase font-bold text-sky-600">Front</span>
-              </>
-            ) : (
-              <>
-                <Camera className="h-5 w-5 text-slate-400 mb-1" />
-                <span className="text-[10px] uppercase font-bold text-slate-500">Front</span>
-              </>
-            )}
-          </button>
+            <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={handleScanCard}
+                        disabled={isScanning || !!data.frontImg}
+                        className={cn(
+                            "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all",
+                            data.frontImg
+                                ? "border-sky-500 bg-sky-50"
+                                : "border-slate-300 hover:border-sky-400 hover:bg-slate-50"
+                        )}
+                    >
+                        {isScanning ? (
+                            <span className="animate-pulse text-[10px] font-bold text-sky-500">SCANNING...</span>
+                        ) : data.frontImg ? (
+                            <>
+                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
+                                <span className="text-[10px] uppercase font-bold text-sky-600">Front</span>
+                            </>
+                        ) : (
+                            <>
+                                <Camera className="h-5 w-5 text-slate-400 mb-1" />
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Front</span>
+                            </>
+                        )}
+                    </button>
 
-          <button className={cn(
-            "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1",
-            data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300"
-          )}>
-            {data.backImg ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
-                <span className="text-[10px] uppercase font-bold text-sky-600">Back</span>
-              </>
-            ) : (
-              <>
-                <Camera className="h-5 w-5 text-slate-400 mb-1" />
-                <span className="text-[10px] uppercase font-bold text-slate-500">Back</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        <Input
-          value={data.provider}
-          onChange={(e) => onChange({ ...data, provider: e.target.value })}
-          placeholder="Provider (e.g. Bao Viet)"
-          className="h-9 text-sm"
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            value={data.policyNumber}
-            onChange={(e) => onChange({ ...data, policyNumber: e.target.value })}
-            placeholder="Policy #"
-            className="h-9 text-sm font-mono"
-          />
-          <div className="relative">
-            <Input
-              type="date"
-              value={data.expiryDate}
-              onChange={(e) => onChange({ ...data, expiryDate: e.target.value })}
-              className="h-9 text-sm font-mono pl-9"
-            />
-            <CalendarIcon className="h-4 w-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-            <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
-            <div className="flex items-center gap-2">
-                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                        className="h-full bg-sky-500" 
-                        style={{width: `${data.estimatedCoverage * 100}%`}} 
-                    />
+                    <button className={cn(
+                        "h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1",
+                        data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300"
+                    )}>
+                        {data.backImg ? (
+                            <>
+                                <CheckCircle2 className="h-5 w-5 text-sky-500 mb-1" />
+                                <span className="text-[10px] uppercase font-bold text-sky-600">Back</span>
+                            </>
+                        ) : (
+                            <>
+                                <Camera className="h-5 w-5 text-slate-400 mb-1" />
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Back</span>
+                            </>
+                        )}
+                    </button>
                 </div>
-                <span className="font-bold text-sky-600 text-lg">
-                    {(data.estimatedCoverage * 100).toFixed(0)}%
-                </span>
-            </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+
+                <Input
+                    value={data.provider}
+                    onChange={(e) => onChange({ ...data, provider: e.target.value })}
+                    placeholder="Provider (e.g. Bao Viet)"
+                    className="h-9 text-sm"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                    <Input
+                        value={data.policyNumber}
+                        onChange={(e) => onChange({ ...data, policyNumber: e.target.value })}
+                        placeholder="Policy #"
+                        className="h-9 text-sm font-mono"
+                    />
+                    <div className="relative">
+                        <Input
+                            type="date"
+                            value={data.expiryDate}
+                            onChange={(e) => onChange({ ...data, expiryDate: e.target.value })}
+                            className="h-9 text-sm font-mono pl-9"
+                        />
+                        <CalendarIcon className="h-4 w-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                    <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
+                    <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-sky-500"
+                                style={{ width: `${data.estimatedCoverage * 100}%` }}
+                            />
+                        </div>
+                        <span className="font-bold text-sky-600 text-lg">
+                            {(data.estimatedCoverage * 100).toFixed(0)}%
+                        </span>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    )
 }
 
 
@@ -1031,39 +1042,39 @@ export function RelatedPartiesCard() {
     )
 }
 
-// // --- 6. VITAL SIGNS (Input Bug Fixed) ---
-// const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
-//     <div className="relative">
-//         <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
-//         <div className="relative">
-//             <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} />
-//             <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
-//         </div>
-//     </div>
-// )
-// function VitalSignsMonitor({ nurseName }: { nurseName: string }) {
-//     const { toast } = useToast()
-//     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" })
-//     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
-//     const saveVitals = () => { toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" }) }
-//     return (
-//         <Card className="border-t-4 border-t-red-500 shadow-sm">
-//             <CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4" /> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader>
-//             <CardContent className="p-4">
-//                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-//                     <UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} />
-//                     <UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} />
-//                     <div className="space-y-1">
-//                         <Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label>
-//                         <div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} /><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} /></div>
-//                     </div>
-//                     <UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} />
-//                 </div>
-//                 <Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button>
-//             </CardContent>
-//         </Card>
-//     )
-// }
+// --- 6. VITAL SIGNS (Input Bug Fixed) ---
+const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
+    <div className="relative">
+        <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
+        <div className="relative">
+            <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} />
+            <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
+        </div>
+    </div>
+)
+function VitalSignsMonitor({ nurseName }: { nurseName: string }) {
+    const { toast } = useToast()
+    const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" })
+    const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
+    const saveVitals = () => { toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" }) }
+    return (
+        <Card className="border-t-4 border-t-red-500 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4" /> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader>
+            <CardContent className="p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} />
+                    <UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} />
+                    <div className="space-y-1">
+                        <Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label>
+                        <div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} /><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} /></div>
+                    </div>
+                    <UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} />
+                </div>
+                <Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button>
+            </CardContent>
+        </Card>
+    )
+}
 
 // --- 7. VISUAL OBSERVATIONS (Tags & Multi-Intent) ---
 function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalIntents: string[] }) {
@@ -1368,9 +1379,9 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
     const filteredTests = useMemo(() => {
         if (!testSearchQuery) return [];
         const lowerQuery = testSearchQuery.toLowerCase();
-        
-        return labTestsData.filter(test => 
-            test.name.toLowerCase().includes(lowerQuery) || 
+
+        return labTestsData.filter(test =>
+            test.name.toLowerCase().includes(lowerQuery) ||
             test.id.toLowerCase().includes(lowerQuery) ||
             (test.description && test.description.toLowerCase().includes(lowerQuery))
         );
@@ -1620,22 +1631,98 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                 </div>
 
                 {/* RIGHT CART */}
-                <div className="w-[350px] border-l bg-white shadow-xl flex flex-col z-20">
-                    <div className="p-4 border-b bg-slate-50 font-bold text-slate-800 flex items-center gap-2"><ShoppingCart className="h-5 w-5" /> Order Cart ({selectedTests.length})</div>
-                    <div className="flex-1 p-4 space-y-2 overflow-y-auto">
-                        {selectedTests.map(t => (
-                            <div key={t.id} className="p-2 border rounded text-sm flex justify-between items-center bg-slate-50">
-                                <span>{t.name}</span>
-                                <span className="font-bold">{formatCurrency(t.price)}</span>
-                            </div>
-                        ))}
-                        {selectedTests.length === 0 && <div className="text-center text-slate-400 text-sm mt-10">Empty Cart</div>}
+                {/* RIGHT SIDEBAR - ORDER CART */}
+                <div className="w-[350px] border-l bg-white shadow-2xl flex flex-col z-20 h-full fixed right-0 top-0 pt-16 md:pt-0 md:relative">
+
+                    {/* 1. CART HEADER */}
+                    <div className="p-4 border-b bg-white flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-slate-800">
+                            <ShoppingCart className="h-5 w-5 text-blue-600" />
+                            <span>Order Cart</span>
+                            <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                {selectedTests.length}
+                            </span>
+                        </div>
                     </div>
-                    <div className="p-4 border-t bg-slate-50">
-                        <Button className="w-full bg-blue-600 hover:bg-blue-700">Submit Order</Button>
+
+                    {/* 2. PATIENT INFO SNAPSHOT */}
+                    <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                            <User className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            {/* Replace 'patientData' with your actual state variable for patient name */}
+                            <h4 className="font-bold text-sm text-slate-900 truncate">
+                                {patientData.name || "New Patient"}
+                            </h4>
+                            <div className="text-xs text-slate-500 flex flex-col gap-0.5">
+                                <span>ID: <span className="font-mono text-slate-600">#PENDING</span></span>
+                                <span className="truncate">
+                                    {patientData.yob || "YYYY"} • {patientData.gender || "Gender"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. SCROLLABLE ITEM LIST */}
+                    <div className="flex-1 p-3 space-y-2 overflow-y-auto bg-slate-50/50">
+                        {selectedTests.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 opacity-60">
+                                <ShoppingCart className="h-12 w-12 stroke-1" />
+                                <p className="text-sm">Cart is empty</p>
+                            </div>
+                        ) : (
+                            selectedTests.map((t) => (
+                                <div
+                                    key={t.id}
+                                    className="group flex justify-between items-start bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
+                                >
+                                    <div className="flex-1 pr-2">
+                                        <div className="text-sm font-medium text-slate-700 leading-tight">
+                                            {t.name}
+                                        </div>
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            Routine • Lab
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className="text-sm font-bold text-slate-900">
+                                            {formatCurrency(t.price)}
+                                        </span>
+
+                                        {/* REMOVE BUTTON */}
+                                        <button
+                                            onClick={() => removeTest(t.id)}
+                                            className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                                            title="Remove item"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* 4. FOOTER & TOTAL */}
+                    <div className="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-sm text-slate-500 font-medium">Total Estimate</span>
+                            <span className="text-xl font-bold text-blue-600">
+                                {formatCurrency(totalPrice)}
+                            </span>
+                        </div>
+
+                        <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold shadow-blue-200 shadow-lg"
+                            disabled={selectedTests.length === 0}
+                        >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Submit Order
+                        </Button>
                     </div>
                 </div>
-            </div>
         </TooltipProvider>
     )
 }

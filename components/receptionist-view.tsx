@@ -1415,21 +1415,7 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                 />
                             </div>
 
-                            {/* 3. Financial Info */}
-                            <div className="md:col-span-1">
-                                <FinancialInfoCard data={financialData} setData={setFinancialData} />
-                            </div>
-
-                            {/* 4. Private Insurance */}
-                            <div className="md:col-span-1">
-                                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
-                            </div>
-
-                            {/* 5. Related Parties */}
-                            <div className="md:col-span-2">
-                                <RelatedPartiesCard />
-                            </div>
-
+                            
                             {/* 6. Medical Intent (Multi Select) */}
                             <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
                                 <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Clinical Context</CardTitle></CardHeader>
@@ -1446,6 +1432,22 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* 3. Financial Info */}
+                            <div className="md:col-span-1">
+                                <FinancialInfoCard data={financialData} setData={setFinancialData} />
+                            </div>
+
+                            {/* 4. Private Insurance */}
+                            <div className="md:col-span-1">
+                                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
+                            </div>
+
+                            {/* 5. Related Parties */}
+                            <div className="md:col-span-2">
+                                <RelatedPartiesCard />
+                            </div>
+
 
                             {/* 7. Vital Signs */}
                             <div className="md:col-span-2"><VitalSignsMonitor nurseName="Lan" /></div>

@@ -14,56 +14,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  Baby,
-  Beaker,
-  CalendarClock,
-  Camera,
-  Check,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  Edit2,
-  Eye,
-  FileSignature,
-  FileText,
-  Filter,
-  FlaskConical,
-  Globe,
-  HeartPulse,
-  History,
-  Image as ImageIcon,
-  Loader2,
-  Lock,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  PlusCircle,
-  QrCode,
-  RefreshCw,
-  Save,
-  Scale,
-  ScanLine,
-  Search,
-  Shield,
-  ShieldCheck,
-  ShoppingCart,
-  Siren,
-  Sparkles,
-  Stethoscope,
-  Thermometer,
-  Trash2,
-  Unlock,
-  User,
-  Users,
-  Video,
-  Wallet,
-  X,
-  Wind,
-  Zap,
+    Activity,
+    AlertTriangle,
+    ArrowRight,
+    Baby,
+    Beaker,
+    CalendarClock,
+    Camera,
+    Check,
+    CheckCircle2,
+    Clock,
+    CreditCard,
+    Edit2,
+    Eye,
+    FileSignature,
+    FileText,
+    Filter,
+    FlaskConical,
+    Globe,
+    HeartPulse,
+    History,
+    Image as ImageIcon,
+    Loader2,
+    Lock,
+    Mail,
+    MapPin,
+    Phone,
+    Plus,
+    PlusCircle,
+    QrCode,
+    RefreshCw,
+    Save,
+    Scale,
+    ScanLine,
+    Search,
+    Shield,
+    ShieldCheck,
+    ShoppingCart,
+    Siren,
+    Sparkles,
+    Stethoscope,
+    Thermometer,
+    Trash2,
+    Unlock,
+    User,
+    Users,
+    Video,
+    Wallet,
+    X,
+    Wind,
+    Zap,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
@@ -510,7 +510,7 @@ export function FinancialInfoCard({ data, setData }: any) {
 
     const handleSimulateScan = () => {
         setScanError("");
-        
+
         // Ensure you have these utility functions available in your project
         // If not, this logic will need to be adjusted to your specific parser
         const parsed = parseVietQR(scanInput);
@@ -545,7 +545,7 @@ export function FinancialInfoCard({ data, setData }: any) {
                     <Wallet className="h-4 w-4" /> Financial & Refund
                 </CardTitle>
             </CardHeader>
-            
+
             <CardContent>
                 <div className="space-y-3">
                     {/* Scan Button Trigger */}
@@ -571,14 +571,14 @@ export function FinancialInfoCard({ data, setData }: any) {
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="space-y-1">
                         <Label className="text-xs text-slate-500">Account No.</Label>
-                        <Input 
-                            placeholder="0071000..." 
-                            value={data.bankAccount} 
-                            onChange={e => setData({ ...data, bankAccount: e.target.value })} 
-                            className="h-8" 
+                        <Input
+                            placeholder="0071000..."
+                            value={data.bankAccount}
+                            onChange={e => setData({ ...data, bankAccount: e.target.value })}
+                            className="h-8"
                         />
                     </div>
                 </div>
@@ -1324,11 +1324,38 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
     const [testSearchQuery, setTestSearchQuery] = useState("")
     const [internalAccess, setInternalAccess] = useState<'locked' | 'unlocked'>('locked')
 
-    // Search Logic
-    const filteredTests = useMemo(() => {
-        if (!testSearchQuery) return []
-        return labTestsData.filter(t => t.name.toLowerCase().includes(testSearchQuery.toLowerCase()))
-    }, [testSearchQuery])
+    // 1. Group tests by their Intent instead of flattening them
+    const suggestedProtocols = useMemo(() => {
+        if (formData.selectedIntents.length === 0) return [];
+
+        return formData.selectedIntents.map(intentId => {
+            const intent = medicalIntents.find(i => i.id === intentId);
+            if (!intent) return null;
+
+            // Resolve test IDs to full test objects
+            const tests = intent.recommended
+                .map(tId => labTestsData.find(t => t.id === tId))
+                .filter(Boolean) as LabTest[];
+
+            if (tests.length === 0) return null;
+
+            return {
+                ...intent,
+                tests
+            };
+        }).filter(Boolean) as Array<{ id: string; label: string; tests: LabTest[] }>;
+    }, [formData.selectedIntents]);
+
+    // Helper to get color styles based on intent ID (matching your screenshots)
+    const getIntentStyles = (id: string) => {
+        switch (id) {
+            case 'chronic_diabetes': return 'border-pink-500 bg-pink-50 text-pink-700 hover:border-pink-400';
+            case 'std_screening': return 'border-orange-500 bg-orange-50 text-orange-700 hover:border-orange-400';
+            case 'fever_infection': return 'border-red-500 bg-red-50 text-red-700 hover:border-red-400';
+            case 'prenatal': return 'border-purple-500 bg-purple-50 text-purple-700 hover:border-purple-400';
+            default: return 'border-indigo-500 bg-indigo-50 text-indigo-700 hover:border-indigo-400';
+        }
+    };
 
     // Suggested Logic
     const suggestedTests = useMemo(() => {
@@ -1415,7 +1442,7 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                 />
                             </div>
 
-                            
+
                             {/* 6. Medical Intent (Multi Select) */}
                             <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
                                 <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Clinical Context</CardTitle></CardHeader>
@@ -1433,39 +1460,81 @@ export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => 
                                 </CardContent>
                             </Card>
 
-                            {/* 9. Order Entry (Fixed Search UI & Recs) */}
+                            {/* 9. Order Entry */}
                             <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
-                                <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2"><Beaker className="h-4 w-4" /> Order Entry</CardTitle></CardHeader>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2">
+                                        <Beaker className="h-4 w-4" /> Order Entry
+                                    </CardTitle>
+                                </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {/* Recommended Protocol Block */}
-                                    {suggestedTests.length > 0 && (
-                                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4 animate-in fade-in slide-in-from-top-2">
-                                            <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-indigo-600" /> Recommended Protocol</h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                {suggestedTests.map(test => {
-                                                    const eligible = checkInsuranceEligibility(test, scannedIdentity);
-                                                    return (
-                                                        <button key={test.id} onClick={() => addTest(test)} className="text-left p-2.5 rounded-lg border bg-white border-indigo-200 hover:border-indigo-400 hover:shadow-md transition-all flex justify-between items-center group">
-                                                            <div>
-                                                                <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">{test.name}</div>
-                                                                <div className="text-[10px] text-slate-500 mt-0.5">{eligible.coveragePercent === 1.0 ? (<span className="text-emerald-600 font-bold flex items-center gap-1"><ShieldCheck className="h-3 w-3" /> 100% Covered</span>) : (formatCurrency(test.price))}</div>
-                                                            </div>
-                                                            <PlusCircle className="h-5 w-5 text-indigo-300 group-hover:text-indigo-600 transition-colors" />
-                                                        </button>
-                                                    )
-                                                })}
-                                            </div>
+
+                                    {/* Recommended Protocol Block - LOOPED per Intent */}
+                                    {suggestedProtocols.length > 0 && (
+                                        <div className="space-y-3 mb-4 animate-in fade-in slide-in-from-top-2">
+                                            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                                <Sparkles className="h-4 w-4 text-indigo-600" /> Recommended Protocols
+                                            </h4>
+
+                                            {suggestedProtocols.map((protocol) => {
+                                                const styles = getIntentStyles(protocol.id);
+
+                                                return (
+                                                    <div key={protocol.id} className={`border-l-4 rounded-r-xl p-3 border border-l-[inherit] ${styles.split(' ').slice(0, 3).join(' ')} border-opacity-20`}>
+                                                        {/* Header for this specific intent */}
+                                                        <div className={`text-xs font-bold uppercase mb-2 opacity-90 ${styles.split(' ').pop()}`}>
+                                                            {protocol.label}
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                            {protocol.tests.map(test => {
+                                                                const eligible = checkInsuranceEligibility(test, scannedIdentity);
+
+                                                                return (
+                                                                    <button
+                                                                        key={`${protocol.id}-${test.id}`} // Unique key in case test appears in multiple groups
+                                                                        onClick={() => addTest(test)}
+                                                                        className="text-left p-2.5 rounded-lg border bg-white border-slate-200 hover:shadow-md transition-all flex justify-between items-center group"
+                                                                    >
+                                                                        <div>
+                                                                            <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">
+                                                                                {test.name}
+                                                                            </div>
+                                                                            <div className="text-[10px] text-slate-500 mt-0.5">
+                                                                                {eligible.coveragePercent === 1.0 ? (
+                                                                                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                                                                                        <ShieldCheck className="h-3 w-3" /> 100% Covered
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    formatCurrency(test.price)
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <PlusCircle className={`h-5 w-5 opacity-40 group-hover:opacity-100 transition-colors ${styles.replace('bg-', 'text-').replace('border-', 'text-')}`} />
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
 
-                                    {/* Search Bar */}
+                                    {/* Search Bar (Remains the same) */}
                                     <div className="relative">
                                         <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                                        <Input className="pl-10 h-10" placeholder="Search tests (e.g., 'hemo')..." value={testSearchQuery} onChange={e => setTestSearchQuery(e.target.value)} />
+                                        <Input
+                                            className="pl-10 h-10"
+                                            placeholder="Search tests (e.g., 'hemo')..."
+                                            value={testSearchQuery}
+                                            onChange={e => setTestSearchQuery(e.target.value)}
+                                        />
                                     </div>
 
-                                    {/* Search Results */}
+                                    {/* Search Results (Remains the same) */}
                                     {testSearchQuery && (
+                                        // ... existing search result code ...
                                         <div className="border rounded-md divide-y divide-slate-100 max-h-60 overflow-y-auto shadow-sm">
                                             {filteredTests.length > 0 ? filteredTests.map(test => (
                                                 <div key={test.id} className="p-3 bg-white flex justify-between items-center hover:bg-slate-50 group cursor-pointer" onClick={() => addTest(test)}>

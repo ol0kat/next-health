@@ -449,8 +449,88 @@ function FinancialInfoCard({ data, setData }: any) {
     )
 }
 
-// --- COMPONENT: PRIVATE INSURANCE (WITH EXPIRY) ---
-function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuranceData) => void, data: PrivateInsuranceData }) {
+// --- TYPES ---
+export interface PrivateInsuranceData {
+  id: string; // Unique ID is crucial for lists
+  provider: string;
+  policyNumber: string;
+  expiryDate: string;
+  frontImg: string | null;
+  backImg: string | null;
+  estimatedCoverage: number;
+}
+
+// --- PARENT COMPONENT: MANAGER ---
+export function PrivateInsuranceManager() {
+  const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([]);
+
+  // 1. Add a new empty insurance card
+  const addInsurance = () => {
+    const newCard: PrivateInsuranceData = {
+      id: Math.random().toString(36).substr(2, 9), // Simple unique ID
+      provider: "",
+      policyNumber: "",
+      expiryDate: "",
+      frontImg: null,
+      backImg: null,
+      estimatedCoverage: 0.0,
+    };
+    setInsurances([...insurances, newCard]);
+  };
+
+  // 2. Update a specific card by ID
+  const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
+    setInsurances((prev) => 
+      prev.map((item) => (item.id === id ? updatedData : item))
+    );
+  };
+
+  // 3. Delete a specific card by ID
+  const removeInsurance = (id: string) => {
+    setInsurances((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="space-y-4 w-full">
+      {/* Header & Add Button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-700">Private Insurance</h3>
+        <Button onClick={addInsurance} size="sm" variant="outline" className="gap-2 h-8 text-xs">
+          <Plus className="h-3 w-3" /> Add Insurance
+        </Button>
+      </div>
+
+      {/* List of Cards */}
+      <div className="space-y-4">
+        {insurances.length === 0 && (
+          <div className="text-center p-6 border-2 border-dashed rounded-lg border-slate-200 text-slate-400 text-xs">
+            No private insurance added yet.
+          </div>
+        )}
+
+        {insurances.map((insurance) => (
+          <PrivateInsuranceCard 
+            key={insurance.id} 
+            data={insurance} 
+            onChange={(newData) => updateInsurance(insurance.id, newData)}
+            onDelete={() => removeInsurance(insurance.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- CHILD COMPONENT: INDIVIDUAL CARD ---
+function PrivateInsuranceCard({ 
+  data, 
+  onChange, 
+  onDelete 
+}: { 
+  data: PrivateInsuranceData, 
+  onChange: (d: PrivateInsuranceData) => void,
+  onDelete: () => void
+}) {
     const { toast } = useToast()
     const [isScanning, setIsScanning] = useState(false)
     
@@ -458,48 +538,99 @@ function PrivateInsuranceCard({ onChange, data }: { onChange: (d: PrivateInsuran
         setIsScanning(true); 
         setTimeout(() => { 
             setIsScanning(false); 
-            onChange({ ...data, isActive: true, provider: "baoviet", policyNumber: "BV-8899-X", expiryDate: "2025-12-31", frontImg: "captured", backImg: "captured", estimatedCoverage: 0.8 }); 
+            // Update specific fields on scan success
+            onChange({ 
+                ...data, 
+                provider: "baoviet", 
+                policyNumber: "BV-8899-X", 
+                expiryDate: "2025-12-31", 
+                frontImg: "captured", 
+                backImg: "captured", 
+                estimatedCoverage: 0.8 
+            }); 
             toast({ title: "Card Scanned", description: "Bao Viet Gold Plan detected via OCR." }) 
         }, 2000) 
     }
     
-    const toggleActive = () => { if (!data.isActive) { onChange({ ...data, isActive: true }) } else { onChange({ ...data, isActive: false }) } }
-    
     return ( 
-        <Card className={cn("border-t-4 shadow-sm transition-all h-full", data.isActive ? "border-t-sky-500 bg-white" : "border-t-slate-200 bg-slate-50")}>
+        <Card className="border-t-4 border-t-sky-500 bg-white shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
             <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
-                <CardTitle className={cn("text-sm uppercase flex items-center gap-2", data.isActive ? "text-sky-600" : "text-slate-400")}>
-                    <Shield className="h-4 w-4"/> Private Ins.
+                <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
+                    <Shield className="h-4 w-4"/> 
+                    {data.provider ? data.provider : "New Policy"}
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                    <Button size="sm" variant={data.isActive ? "secondary" : "outline"} className="h-6 text-[10px]" onClick={toggleActive}>{data.isActive ? "Remove" : "Add"}</Button>
+                    <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-6 w-6 text-slate-400 hover:text-red-500 hover:bg-red-50" 
+                        onClick={onDelete}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </div>
             </CardHeader>
-            {data.isActive && (
-                <CardContent className="p-4 space-y-4">
+            <CardContent className="p-4 space-y-4">
+                {/* Image Upload Area */}
+                <div className="grid grid-cols-2 gap-2">
+                    <button 
+                        onClick={handleScanCard} 
+                        disabled={isScanning}
+                        className={cn(
+                            "h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-colors", 
+                            data.frontImg ? "border-sky-500 bg-sky-50" : "border-slate-300 hover:bg-slate-50"
+                        )}
+                    >
+                        {isScanning ? (
+                            <span className="animate-pulse text-[9px] font-bold text-sky-500">SCANNING...</span>
+                        ) : data.frontImg ? (
+                            <CheckCircle2 className="h-4 w-4 text-sky-500"/>
+                        ) : (
+                            <Camera className="h-4 w-4 text-slate-400"/>
+                        )}
+                        {!isScanning && <span className="text-[9px] uppercase font-bold text-slate-500">Front</span>}
+                    </button>
+
+                    <button className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
+                        {data.backImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
+                        <span className="text-[9px] uppercase font-bold text-slate-500">Back</span>
+                    </button>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-2">
+                    <Input 
+                        value={data.provider} 
+                        onChange={(e) => onChange({...data, provider: e.target.value})} 
+                        placeholder="Provider Name (e.g. Bao Viet)" 
+                        className="h-8 text-xs"
+                    />
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleScanCard} className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.frontImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
-                            {data.frontImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
-                            <span className="text-[9px] uppercase font-bold text-slate-500">Front</span>
-                        </button>
-                        <button className={cn("h-16 rounded border-2 border-dashed flex flex-col items-center justify-center gap-1", data.backImg ? "border-sky-500 bg-sky-50" : "border-slate-300")}>
-                            {data.backImg ? <CheckCircle2 className="h-4 w-4 text-sky-500"/> : <Camera className="h-4 w-4 text-slate-400"/>}
-                            <span className="text-[9px] uppercase font-bold text-slate-500">Back</span>
-                        </button>
+                        <Input 
+                            value={data.policyNumber} 
+                            onChange={(e) => onChange({...data, policyNumber: e.target.value})} 
+                            placeholder="Policy #" 
+                            className="h-8 text-xs font-mono"
+                        />
+                        <Input 
+                            type="date" 
+                            value={data.expiryDate} 
+                            onChange={(e) => onChange({...data, expiryDate: e.target.value})} 
+                            className="h-8 text-xs font-mono"
+                        />
                     </div>
-                    <div className="space-y-2">
-                        <Input value={data.policyNumber} onChange={(e) => onChange({...data, policyNumber: e.target.value})} placeholder="Policy #" className="h-8 text-xs font-mono"/>
-                        <Input type="date" value={data.expiryDate} onChange={(e) => onChange({...data, expiryDate: e.target.value})} className="h-8 text-xs font-mono"/>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-500">Est. Coverage</span>
-                        <span className="font-bold text-sky-600 text-sm">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
-                    </div>
-                </CardContent>
-            )}
+                </div>
+
+                {/* Footer Info */}
+                <div className="flex justify-between items-center bg-slate-50 -mx-4 -mb-4 px-4 py-2 border-t border-slate-100 mt-2">
+                    <span className="text-xs text-slate-500">Est. Coverage</span>
+                    <span className="font-bold text-sky-600 text-sm">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
+                </div>
+            </CardContent>
         </Card>
     )
 }
+
 
 // --- COMPONENT: RELATED PARTIES ---
 export function RelatedPartiesCard() {

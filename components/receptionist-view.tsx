@@ -451,7 +451,7 @@ function FinancialInfoCard({ data, setData }: any) {
 
 // --- TYPES ---
 export interface PrivateInsuranceData {
-  id: string; // Unique ID is crucial for lists
+  id: string;
   provider: string;
   policyNumber: string;
   expiryDate: string;
@@ -460,22 +460,10 @@ export interface PrivateInsuranceData {
   estimatedCoverage: number;
 }
 
-
-
-// --- TYPES ---
-export interface PrivateInsuranceData {
-  id: string; // Unique ID needed for the list
-  provider: string;
-  policyNumber: string;
-  expiryDate: string;
-  frontImg: string | null;
-  backImg: string | null;
-  estimatedCoverage: number;
-}
-
-// --- MAIN COMPONENT (Use this in your page) ---
-export default function PrivateInsuranceManager() {
-  // Start with 1 empty card by default
+// --- MANAGER COMPONENT ---
+// Place this where you want the list of insurances to appear
+export function PrivateInsuranceManager() {
+  // Start with 1 empty card
   const [insurances, setInsurances] = useState<PrivateInsuranceData[]>([
     {
       id: "init-1",
@@ -488,10 +476,10 @@ export default function PrivateInsuranceManager() {
     }
   ]);
 
-  // Add a new empty card to the list
+  // Add a new empty card
   const addInsurance = () => {
     const newCard: PrivateInsuranceData = {
-      id: Date.now().toString(), // Unique ID based on timestamp
+      id: Math.random().toString(36).substr(2, 9),
       provider: "",
       policyNumber: "",
       expiryDate: "",
@@ -502,7 +490,7 @@ export default function PrivateInsuranceManager() {
     setInsurances([...insurances, newCard]);
   };
 
-  // Update a specific card's data
+  // Update a specific card
   const updateInsurance = (id: string, updatedData: PrivateInsuranceData) => {
     setInsurances((prev) => 
       prev.map((item) => (item.id === id ? updatedData : item))
@@ -516,17 +504,15 @@ export default function PrivateInsuranceManager() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Private Insurance</h3>
       </div>
 
-      {/* RENDER THE LIST OF CARDS */}
       <div className="space-y-4">
-        {insurances.map((insurance, index) => (
+        {insurances.map((insurance) => (
           <PrivateInsuranceCard 
             key={insurance.id} 
             data={insurance} 
-            // Only allow deleting if there is more than 1 card (optional)
             canDelete={insurances.length > 0} 
             onChange={(newData) => updateInsurance(insurance.id, newData)}
             onDelete={() => removeInsurance(insurance.id)}
@@ -534,10 +520,10 @@ export default function PrivateInsuranceManager() {
         ))}
       </div>
 
-      {/* ADD BUTTON - PLACED AT THE BOTTOM */}
+      {/* ADD BUTTON AT THE BOTTOM */}
       <Button 
         variant="outline" 
-        className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50 mt-4" 
+        className="w-full border-dashed border-2 h-12 text-slate-500 hover:text-sky-600 hover:border-sky-500 hover:bg-sky-50" 
         onClick={addInsurance}
       >
         <Plus className="mr-2 h-4 w-4" /> Add Another Policy
@@ -546,7 +532,7 @@ export default function PrivateInsuranceManager() {
   );
 }
 
-// --- SUB-COMPONENT: SINGLE CARD ---
+// --- CARD COMPONENT ---
 function PrivateInsuranceCard({ 
   data, 
   onChange, 
@@ -565,7 +551,6 @@ function PrivateInsuranceCard({
         setIsScanning(true); 
         setTimeout(() => { 
             setIsScanning(false); 
-            // Mock scan result
             onChange({ 
                 ...data, 
                 provider: "baoviet", 
@@ -580,14 +565,13 @@ function PrivateInsuranceCard({
     }
     
     return ( 
-        <Card className="group relative border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
+        <Card className="group border-t-4 border-t-sky-500 bg-white shadow-sm hover:shadow-md transition-all">
             <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm uppercase flex items-center gap-2 text-sky-600">
                     <Shield className="h-4 w-4"/> 
                     {data.provider ? data.provider : "New Policy"}
                 </CardTitle>
                 
-                {/* Delete Button */}
                 {canDelete && (
                     <Button 
                         size="icon" 
@@ -600,7 +584,6 @@ function PrivateInsuranceCard({
                 )}
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-                {/* Images */}
                 <div className="grid grid-cols-2 gap-3">
                     <button 
                         onClick={handleScanCard} 
@@ -645,7 +628,6 @@ function PrivateInsuranceCard({
                     </button>
                 </div>
 
-                {/* Fields */}
                 <Input 
                     value={data.provider} 
                     onChange={(e) => onChange({...data, provider: e.target.value})} 
@@ -660,14 +642,13 @@ function PrivateInsuranceCard({
                         className="h-9 text-sm font-mono"
                     />
                     <Input 
-                        type="date" // Uses browser native date picker
+                        type="date" 
                         value={data.expiryDate} 
                         onChange={(e) => onChange({...data, expiryDate: e.target.value})} 
                         className="h-9 text-sm font-mono"
                     />
                 </div>
 
-                {/* Footer Coverage */}
                 <div className="flex justify-between items-center pt-2 border-t border-slate-100">
                     <span className="text-xs font-medium text-slate-500">Est. Coverage</span>
                     <span className="font-bold text-sky-600 text-lg">{(data.estimatedCoverage * 100).toFixed(0)}%</span>
@@ -676,6 +657,9 @@ function PrivateInsuranceCard({
         </Card>
     )
 }
+
+
+
 // --- COMPONENT: RELATED PARTIES ---
 export function RelatedPartiesCard() {
     const { toast } = useToast()

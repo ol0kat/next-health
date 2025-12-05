@@ -1126,170 +1126,103 @@ function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalInt
 }
 
 // --- 8. TELEHEALTH (Specialty Filter) ---
-export default function TelehealthDispatchCard({ medicalIntents = ["consult"], requiredWaitHours = 0 }: { medicalIntents?: string[], requiredWaitHours?: number }) {
-    const { toast } = useToast()
 
-    // Global State
+// --- 8. TELEHEALTH DISPATCH CARD (NEW CALENDAR UX) ---
+function TelehealthDispatchCard({ medicalIntents: selectedIntents, requiredWaitHours = 0 }: { medicalIntents: string[], requiredWaitHours?: number }) {
+    const { toast } = useToast()
     const [specialtyFilter, setSpecialtyFilter] = useState("all")
     const [bookingMode, setBookingMode] = useState<"auto" | "manual">("auto")
-
-    // Selection State
-    const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null)
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
+    const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
 
-    // Derived Data
+    // Calculate when results will be ready
     const resultReadyTime = useMemo(() => {
         const d = new Date()
         d.setHours(d.getHours() + requiredWaitHours)
         return d
     }, [requiredWaitHours])
 
-    const dates = useMemo(() => Array.from({ length: 3 }).map((_, i) => {
-        const d = new Date()
-        d.setDate(d.getDate() + i)
-        return d
-    }), [])
-
-    const filteredDoctors = useMemo(() => {
-        let docs = [...doctorPool];
-        if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter);
-        return docs
-    }, [specialtyFilter])
-
-    const selectedDoctor = useMemo(() =>
-        doctorPool.find(d => d.id === selectedDoctorId),
-        [selectedDoctorId])
-
-    const uniqueSpecialties = useMemo(() => ["all", ...Array.from(new Set(doctorPool.map(d => d.specialty)))], [])
-
-    // --- EFFECTS ---
-
-    // When switching modes, handle selection logic
-    useEffect(() => {
-        if (bookingMode === 'auto') {
-            // In auto mode, default to first available doctor if none selected
-            if (!selectedDoctorId && filteredDoctors.length > 0) {
-                setSelectedDoctorId(filteredDoctors[0].id)
-            }
-        } else {
-            // In manual mode, we don't auto-select. 
-            // If the user already picked someone in Auto, we keep them selected.
-            // If they haven't picked anyone, we leave it null so they see the list.
-            setSelectedSlot(null) // Reset time slot when switching modes
-        }
-    }, [bookingMode, filteredDoctors])
-
-
-    // --- HANDLERS ---
-
-    const handleDoctorSelect = (id: string) => {
-        setSelectedDoctorId(id);
-        setSelectedSlot(null); // Reset slot if doctor changes
-    }
-
-    const handleBook = () => {
-        if (!selectedDoctor) return;
-
-        const timeMsg = bookingMode === 'auto'
-            ? `as soon as results are ready (~${requiredWaitHours}h)`
-            : `on ${selectedDate.toLocaleDateString('en-GB', { weekday: 'short' })} at ${selectedSlot}`
-
-        toast({
-            title: "Telehealth Scheduled",
-            description: `${selectedDoctor.name} booked for ${timeMsg}.`,
-            className: "bg-pink-600 text-white border-none"
+    // Generate next 3 days
+    const dates = useMemo(() => {
+        return Array.from({ length: 3 }).map((_, i) => {
+            const d = new Date()
+            d.setDate(d.getDate() + i)
+            return d
         })
-    }
+    }, [])
 
-    // Generate Slots (Simplified for brevity)
+    // Generate Mock Time Slots
     const timeSlots = useMemo(() => {
         const slots = []
+        // Morning 8-12, Afternoon 13-17, Evening 17-21
         const periods = [
             { label: "Morning", start: 8, end: 11, icon: <Zap className="h-3 w-3" /> },
             { label: "Afternoon", start: 13, end: 16, icon: <Clock className="h-3 w-3" /> },
-            { label: "Evening", start: 17, end: 20, icon: <CheckCircle2 className="h-3 w-3" /> }
+            { label: "Evening", start: 17, end: 20, icon: <CheckCircle2 className="h-3 w-3" /> } // Using CheckCircle just as a distinct icon placeholder or Moon
         ]
 
         for (const p of periods) {
             const periodSlots = []
             for (let hour = p.start; hour <= p.end; hour++) {
                 const timeStr = `${hour}:00`
+                // Create a comparable date object for this slot
                 const slotDate = new Date(selectedDate)
                 slotDate.setHours(hour, 0, 0, 0)
+
+                // Logic: Disable if slot is BEFORE result ready time
+                // Or if slot is in the past (for today)
                 const isTooEarly = slotDate < resultReadyTime
-                periodSlots.push({ time: timeStr, disabled: isTooEarly })
+
+                periodSlots.push({ time: timeStr, disabled: isTooEarly, date: slotDate })
             }
             slots.push({ ...p, slots: periodSlots })
         }
         return slots
     }, [selectedDate, resultReadyTime])
 
-    if (medicalIntents.length === 0) return null
+    // Filter Doctors
+    const uniqueSpecialties = useMemo(() => ["all", ...Array.from(new Set(doctorPool.map(d => d.specialty)))], [])
+    const filteredDoctors = useMemo(() => {
+        let docs = [...doctorPool];
+        if (specialtyFilter !== 'all') docs = docs.filter(d => d.specialty === specialtyFilter);
+        return docs
+    }, [specialtyFilter])
 
-    // --- RENDER HELPERS ---
+    // Auto-select best doctor for Auto Mode
+    useEffect(() => {
+        if (filteredDoctors.length > 0 && !selectedDoctor) setSelectedDoctor(filteredDoctors[0].id)
+    }, [filteredDoctors])
 
-    const DoctorListParams = {
-        showAvailability: true,
-        selectable: true,
+    const handleBook = () => {
+        const drName = doctorPool.find(d => d.id === selectedDoctor)?.name || "Assigned Doctor"
+        const timeMsg = bookingMode === 'auto'
+            ? `as soon as results are ready (~${requiredWaitHours}h)`
+            : `on ${selectedDate.toLocaleDateString('en-GB', { weekday: 'short' })} at ${selectedSlot}`
+
+        toast({
+            title: "Telehealth Scheduled",
+            description: `${drName} booked for ${timeMsg}. SMS sent to patient.`,
+            className: "bg-pink-600 text-white"
+        })
     }
 
-    const renderDoctorList = (doctors: typeof doctorPool) => (
-        <div className="max-h-[300px] overflow-y-auto">
-            {doctors.map(dr => (
-                <div
-                    key={dr.id}
-                    onClick={() => handleDoctorSelect(dr.id)}
-                    className={cn(
-                        "p-3 border-b flex justify-between items-center cursor-pointer transition-all hover:bg-slate-50 border-l-4",
-                        selectedDoctorId === dr.id
-                            ? "bg-pink-50 border-l-pink-500"
-                            : "border-l-transparent"
-                    )}
-                >
-                    <div className="flex items-center gap-3">
-                        <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold", dr.avatarColor)}>
-                            {dr.name.substring(0, 2)}
-                        </div>
-                        <div>
-                            <div className="text-sm font-bold text-slate-700">{dr.name}</div>
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wide">{dr.specialty}</div>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <div className={cn("text-xs font-bold", dr.status === 'online' ? "text-green-600" : "text-slate-400")}>
-                            {dr.status === 'online' ? 'Available' : 'Busy'}
-                        </div>
-                        <div className="text-[10px] text-slate-400">Queue: {dr.queueLength}</div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    )
+    if (selectedIntents.length === 0) return null
 
     return (
-        <Card className="border-t-4 border-t-pink-500 shadow-sm w-full max-w-md mx-auto bg-white">
+        <Card className="border-t-4 border-t-pink-500 shadow-sm">
             <CardHeader className="pb-3 border-b border-slate-50">
-                <div className="flex flex-row items-center justify-between mb-2">
-                    <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2">
-                        <Video className="h-4 w-4" /> Telehealth Dispatch
-                    </CardTitle>
-                    <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
-                        <SelectTrigger className="h-7 w-32 text-xs bg-slate-50 border-slate-200">
-                            <SelectValue placeholder="Specialty" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {uniqueSpecialties.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                <div className="flex flex-row items-center justify-between mb-3">
+                    <CardTitle className="text-sm uppercase text-pink-600 flex items-center gap-2"><Video className="h-4 w-4" /> Telehealth Dispatch</CardTitle>
+                    <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}><SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Specialty" /></SelectTrigger><SelectContent>{uniqueSpecialties.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                 </div>
 
-                {/* Warning Banner */}
+                {/* Result Wait Time Banner */}
                 {requiredWaitHours > 0 && (
-                    <div className="bg-amber-50 text-amber-800 text-[11px] px-3 py-2 rounded-md flex items-start gap-2 border border-amber-100 leading-tight">
-                        <CalendarClock className="h-3 w-3 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="bg-amber-50 text-amber-800 text-xs px-3 py-2 rounded-md flex items-center gap-2 border border-amber-100">
+                        <CalendarClock className="h-4 w-4 text-amber-600" />
                         <span>
-                            Labs processing. Earliest booking: <span className="font-bold">{resultReadyTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>.
+                            <strong>Wait Time Enforced:</strong> Lab results ready by <span className="font-bold">{resultReadyTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>. Earlier slots disabled.
                         </span>
                     </div>
                 )}
@@ -1304,124 +1237,492 @@ export default function TelehealthDispatchCard({ medicalIntents = ["consult"], r
                         </TabsList>
                     </div>
 
-                    {/* --- TAB 1: AUTO --- */}
-                    <TabsContent value="auto" className="p-0 m-0 min-h-[250px] flex flex-col justify-between">
-                        <div>
-                            <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-white">
-                                Select Available Doctor
-                            </div>
-                            {renderDoctorList(filteredDoctors)}
+                    {/* MODE 1: AUTO DISPATCH (Classic) */}
+                    <TabsContent value="auto" className="p-0 m-0">
+                        <div className="max-h-48 overflow-y-auto">
+                            {filteredDoctors.map(dr => (
+                                <div key={dr.id} onClick={() => setSelectedDoctor(dr.id)} className={cn("p-3 border-b flex justify-between items-center cursor-pointer hover:bg-slate-50 border-l-4", selectedDoctor === dr.id ? "bg-pink-50 border-l-pink-500" : "border-l-transparent")}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-[10px]", dr.avatarColor)}>{dr.name.substring(0, 2)}</div>
+                                        <div><div className="text-sm font-bold text-slate-700">{dr.name}</div><div className="text-[10px] text-slate-500">{dr.specialty}</div></div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs font-bold text-slate-700">{dr.status === 'online' ? 'Available' : 'Busy'}</div>
+                                        <div className="text-[10px] text-slate-400">Queue: {dr.queueLength}</div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </TabsContent>
 
-                    {/* --- TAB 2: MANUAL --- */}
-                    <TabsContent value="manual" className="p-0 m-0 min-h-[250px]">
-
-                        {/* STEP 1: Select Doctor (If none selected) */}
-                        {!selectedDoctorId ? (
-                            <div>
-                                <div className="px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-white flex justify-between items-center">
-                                    <span>Step 1: Select Doctor</span>
-                                </div>
-                                {renderDoctorList(filteredDoctors)}
-                            </div>
-                        ) : (
-                            /* STEP 2: Select Time (If doctor selected) */
-                            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                                {/* Selected Doctor Header */}
-                                <div className="bg-pink-50 p-3 flex items-center justify-between border-b border-pink-100">
-                                    <div className="flex items-center gap-2">
-                                        <div className={cn("h-6 w-6 rounded-full flex items-center justify-center text-[10px]", selectedDoctor?.avatarColor)}>
-                                            {selectedDoctor?.name.substring(0, 2)}
-                                        </div>
-                                        <div className="text-sm font-bold text-pink-900">{selectedDoctor?.name}</div>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => { setSelectedDoctorId(null); setSelectedSlot(null); }}
-                                        className="h-6 text-[10px] hover:bg-pink-100 text-pink-700 hover:text-pink-900 px-2"
+                    {/* MODE 2: MANUAL CALENDAR */}
+                    <TabsContent value="manual" className="p-4 m-0 space-y-4">
+                        {/* Date Selector */}
+                        <div className="flex gap-2 overflow-x-auto pb-2">
+                            {dates.map(date => {
+                                const isSelected = date.toDateString() === selectedDate.toDateString()
+                                return (
+                                    <button
+                                        key={date.toString()}
+                                        onClick={() => setSelectedDate(date)}
+                                        className={cn(
+                                            "flex-1 min-w-[80px] py-2 rounded-lg border text-center transition-all",
+                                            isSelected ? "bg-slate-800 text-white border-slate-800 shadow-md" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                                        )}
                                     >
-                                        Change <User className="ml-1 h-3 w-3" />
-                                    </Button>
-                                </div>
+                                        <div className="text-[10px] uppercase font-bold opacity-70">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
+                                        <div className="text-sm font-bold">{date.getDate()}</div>
+                                    </button>
+                                )
+                            })}
+                        </div>
 
-                                <div className="p-4 space-y-4">
-                                    {/* Date Strips */}
-                                    <div className="flex gap-2">
-                                        {dates.map(date => {
-                                            const isSelected = date.toDateString() === selectedDate.toDateString()
-                                            return (
-                                                <button
-                                                    key={date.toString()}
-                                                    onClick={() => setSelectedDate(date)}
-                                                    className={cn(
-                                                        "flex-1 py-2 rounded-md border text-center transition-all",
-                                                        isSelected
-                                                            ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-200"
-                                                            : "bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:bg-pink-50"
-                                                    )}
-                                                >
-                                                    <div className="text-[10px] uppercase font-bold opacity-70">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
-                                                    <div className="text-sm font-bold">{date.getDate()}</div>
-                                                </button>
-                                            )
-                                        })}
+                        {/* Time Grid */}
+                        <div className="space-y-4">
+                            {timeSlots.map(period => (
+                                <div key={period.label}>
+                                    <div className="flex items-center gap-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                        {period.icon} {period.label}
                                     </div>
-
-                                    {/* Time Grid */}
-                                    <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                                        {timeSlots.map(period => (
-                                            <div key={period.label}>
-                                                <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                    {period.icon} {period.label}
-                                                </div>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {period.slots.map(slot => (
-                                                        <button
-                                                            key={slot.time}
-                                                            disabled={slot.disabled}
-                                                            onClick={() => setSelectedSlot(slot.time)}
-                                                            className={cn(
-                                                                "py-1.5 rounded text-xs font-bold border transition-all",
-                                                                slot.disabled
-                                                                    ? "bg-slate-50 text-slate-200 border-slate-100 cursor-not-allowed"
-                                                                    : selectedSlot === slot.time
-                                                                        ? "bg-pink-600 text-white border-pink-600 shadow-sm scale-105"
-                                                                        : "bg-white text-slate-600 border-slate-200 hover:border-pink-400 hover:text-pink-600"
-                                                            )}
-                                                        >
-                                                            {slot.time}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {period.slots.map(slot => (
+                                            <button
+                                                key={slot.time}
+                                                disabled={slot.disabled}
+                                                onClick={() => setSelectedSlot(slot.time)}
+                                                className={cn(
+                                                    "py-1.5 rounded text-xs font-bold border transition-all relative overflow-hidden",
+                                                    slot.disabled
+                                                        ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
+                                                        : selectedSlot === slot.time
+                                                            ? "bg-pink-600 text-white border-pink-600 shadow-sm"
+                                                            : "bg-white text-slate-700 border-slate-200 hover:border-pink-300 hover:text-pink-600"
+                                                )}
+                                            >
+                                                {slot.time}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+
+                        {/* Selected Context */}
+                        {selectedSlot && (
+                            <div className="bg-pink-50 border border-pink-100 rounded p-2 text-center text-xs text-pink-800">
+                                Booking <span className="font-bold">{doctorPool[0].name}</span> for <span className="font-bold">{selectedDate.toLocaleDateString()} at {selectedSlot}</span>
                             </div>
                         )}
                     </TabsContent>
                 </Tabs>
 
                 {/* Footer Action */}
-                <div className="p-3 bg-slate-50 border-t border-slate-100 flex flex-col gap-2">
-                    {bookingMode === 'manual' && selectedDoctorId && !selectedSlot && (
-                        <div className="text-center text-[10px] text-slate-400 italic">Please select a time slot</div>
-                    )}
-
+                <div className="p-3 bg-slate-50 border-t border-slate-100">
                     <Button
                         onClick={handleBook}
-                        className="w-full bg-pink-600 hover:bg-pink-700 transition-colors shadow-sm"
-                        disabled={
-                            (bookingMode === 'manual' && (!selectedSlot || !selectedDoctorId)) ||
-                            (bookingMode === 'auto' && !selectedDoctorId)
-                        }
+                        className="w-full bg-pink-600 hover:bg-pink-700"
+                        disabled={bookingMode === 'manual' && !selectedSlot}
                     >
-                        {bookingMode === 'auto' ? "Dispatch Now" : "Confirm Schedule"}
+                        {bookingMode === 'auto' ? "Dispatch Now" : "Schedule Appointment"}
                     </Button>
                 </div>
             </CardContent>
         </Card>
+    )
+}
+
+
+// --- MAIN PAGE ---
+export function ReceptionistView({ refreshPatients }: { refreshPatients?: () => Promise<void> } = {}) {
+    const { toast } = useToast()
+
+    // STATE
+    const [scanStep, setScanStep] = useState<"idle" | "cccd" | "checking-bhyt" | "complete">("idle")
+    const [scannedIdentity, setScannedIdentity] = useState<any>(null)
+
+    const [formData, setFormData] = useState({
+        fullName: "", dob: "", gender: "", citizenId: "",
+        phonePrefix: "+84", phone: "", email: "", address: "", provinceId: "",
+        communeId: "",
+        selectedIntents: [] as string[]
+    })
+
+    const [financialData, setFinancialData] = useState({ cardLast4: "", cardExpiry: "", bankName: "", bankAccount: "" })
+    const [privateInsurance, setPrivateInsurance] = useState<PrivateInsuranceData>({ provider: "", policyNumber: "", expiryDate: "", frontImg: null, backImg: null, estimatedCoverage: 0.0, isActive: false })
+
+    const [selectedTests, setSelectedTests] = useState<LabTest[]>([])
+    const [testSearchQuery, setTestSearchQuery] = useState("")
+    const [internalAccess, setInternalAccess] = useState<'locked' | 'unlocked'>('locked')
+
+    // 1. Group tests by their Intent instead of flattening them
+    const suggestedProtocols = useMemo(() => {
+        if (formData.selectedIntents.length === 0) return [];
+
+        return formData.selectedIntents.map(intentId => {
+            const intent = medicalIntents.find(i => i.id === intentId);
+            if (!intent) return null;
+
+            // Resolve test IDs to full test objects
+            const tests = intent.recommended
+                .map(tId => labTestsData.find(t => t.id === tId))
+                .filter(Boolean) as LabTest[];
+
+            if (tests.length === 0) return null;
+
+            return {
+                ...intent,
+                tests
+            };
+        }).filter(Boolean) as Array<{ id: string; label: string; tests: LabTest[] }>;
+    }, [formData.selectedIntents]);
+
+    const filteredTests = useMemo(() => {
+        if (!testSearchQuery) return [];
+        const lowerQuery = testSearchQuery.toLowerCase();
+
+        return labTestsData.filter(test =>
+            test.name.toLowerCase().includes(lowerQuery) ||
+            test.id.toLowerCase().includes(lowerQuery) ||
+            (test.description && test.description.toLowerCase().includes(lowerQuery))
+        );
+    }, [testSearchQuery]);
+
+
+    // Helper to get color styles based on intent ID (matching your screenshots)
+    const getIntentStyles = (id: string) => {
+        switch (id) {
+            case 'chronic_diabetes': return 'border-pink-500 bg-pink-50 text-pink-700 hover:border-pink-400';
+            case 'std_screening': return 'border-orange-500 bg-orange-50 text-orange-700 hover:border-orange-400';
+            case 'fever_infection': return 'border-red-500 bg-red-50 text-red-700 hover:border-red-400';
+            case 'prenatal': return 'border-purple-500 bg-purple-50 text-purple-700 hover:border-purple-400';
+            default: return 'border-indigo-500 bg-indigo-50 text-indigo-700 hover:border-indigo-400';
+        }
+    };
+
+    // Suggested Logic
+    const suggestedTests = useMemo(() => {
+        if (formData.selectedIntents.length === 0) return [];
+        const allTestIds = new Set<string>();
+        formData.selectedIntents.forEach(id => { const intent = medicalIntents.find(i => i.id === id); if (intent) intent.recommended.forEach(tId => allTestIds.add(tId)) });
+        return Array.from(allTestIds).map(id => labTestsData.find(t => t.id === id)).filter(Boolean) as LabTest[]
+    }, [formData.selectedIntents])
+
+    // Helper for BHYT Fetch
+    const simulateBHYTFetch = (name: string, cid: string) => {
+        setScanStep("checking-bhyt");
+        toast({ title: "Checking Insurance...", description: `Verifying BHYT for ${name}` });
+        setTimeout(() => {
+            const found = cid.startsWith("079");
+            if (found) {
+                setScannedIdentity((prev: any) => ({ ...prev, bhyt: { code: "DN4797915071630", coverageLabel: "80% (Lvl 4)", expiry: "31/12/2025" } }));
+                toast({ title: "Insurance Verified", description: "BHYT data retrieved successfully.", className: "bg-emerald-600 text-white" });
+            } else {
+                toast({ title: "No Insurance Found", description: "Could not find BHYT records for this ID.", variant: "destructive" });
+            }
+            setScanStep("complete");
+        }, 1500);
+    }
+
+    // Handlers
+    const handleScanComplete = () => {
+        setScanStep("cccd");
+        setTimeout(() => {
+            const extracted = { name: "TRẦN THỊ NGỌC LAN", dob: "15/05/1992", gender: "female", citizenId: "079192000123", address: "123 Nguyen Hue, D1" };
+            setScannedIdentity(extracted);
+            setFormData(prev => ({ ...prev, fullName: extracted.name, dob: extracted.dob, gender: extracted.gender, citizenId: extracted.citizenId, address: extracted.address }));
+            simulateBHYTFetch(extracted.name, extracted.citizenId);
+        }, 1000);
+    }
+
+    const handleManualBHYTCheck = () => {
+        if (!formData.fullName || !formData.citizenId) {
+            toast({ title: "Missing Info", description: "Please enter Name and ID to check insurance.", variant: "destructive" });
+            return;
+        }
+        simulateBHYTFetch(formData.fullName, formData.citizenId);
+    }
+
+    const toggleIntent = (id: string) => {
+        setFormData(prev => {
+            const current = prev.selectedIntents || []
+            const updated = current.includes(id) ? current.filter(i => i !== id) : [...current, id]
+            return { ...prev, selectedIntents: updated }
+        })
+    }
+
+    const addTest = (test: LabTest) => {
+        if (!selectedTests.find(t => t.id === test.id)) { setSelectedTests(prev => [...prev, test]); setTestSearchQuery(""); }
+    }
+
+    const checkInsuranceEligibility = (test: LabTest, patient: any) => {
+        if (!patient?.bhyt) return { isCovered: false, coveragePercent: 0 };
+        return { isCovered: true, coveragePercent: 0.8 }; // Mock logic
+    }
+
+    return (
+        <TooltipProvider>
+            <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+                {/* LEFT SCROLLABLE AREA */}
+                <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
+                    <div className="max-w-5xl mx-auto space-y-6 pb-24">
+                        <div><h1 className="text-2xl font-bold text-slate-900">Patient Admission</h1></div>
+
+                        {/* 1. Identity & BHYT (Unified) */}
+                        <IdentityVerificationCard
+                            scanStep={scanStep} onScanComplete={handleScanComplete}
+                            bhytData={scannedIdentity?.bhyt} internalAccess={internalAccess}
+                            onInternalHistoryClick={() => setInternalAccess('unlocked')}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* 2. Demographics (Expanded) */}
+                            <div className="md:col-span-2">
+                                <DemographicsCard
+                                    formData={formData}
+                                    setFormData={setFormData}
+                                    onCheckBHYT={handleManualBHYTCheck}
+                                />
+                            </div>
+
+
+                            {/* 6. Medical Intent (Multi Select) */}
+                            <Card className="border-t-4 border-t-emerald-500 shadow-sm md:col-span-2">
+                                <CardHeader className="pb-2"><CardTitle className="text-sm uppercase text-emerald-600 flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Clinical Context</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-wrap gap-2">
+                                        {medicalIntents.map(intent => {
+                                            const isSelected = formData.selectedIntents.includes(intent.id)
+                                            return (
+                                                <button key={intent.id} onClick={() => toggleIntent(intent.id)} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold border transition-all flex items-center gap-2", isSelected ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" : "bg-white text-slate-600 border-slate-200")}>
+                                                    {isSelected && <Check className="h-3 w-3" />}{intent.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* 9. Order Entry */}
+                            <Card className="border-t-4 border-t-indigo-500 shadow-sm md:col-span-2 mb-20">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm uppercase text-indigo-600 flex items-center gap-2">
+                                        <Beaker className="h-4 w-4" /> Order Entry
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+
+                                    {/* Recommended Protocol Block - LOOPED per Intent */}
+                                    {suggestedProtocols.length > 0 && (
+                                        <div className="space-y-3 mb-4 animate-in fade-in slide-in-from-top-2">
+                                            <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                                <Sparkles className="h-4 w-4 text-indigo-600" /> Recommended Protocols
+                                            </h4>
+
+                                            {suggestedProtocols.map((protocol) => {
+                                                const styles = getIntentStyles(protocol.id);
+
+                                                return (
+                                                    <div key={protocol.id} className={`border-l-4 rounded-r-xl p-3 border border-l-[inherit] ${styles.split(' ').slice(0, 3).join(' ')} border-opacity-20`}>
+                                                        {/* Header for this specific intent */}
+                                                        <div className={`text-xs font-bold uppercase mb-2 opacity-90 ${styles.split(' ').pop()}`}>
+                                                            {protocol.label}
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                            {protocol.tests.map(test => {
+                                                                const eligible = checkInsuranceEligibility(test, scannedIdentity);
+
+                                                                return (
+                                                                    <button
+                                                                        key={`${protocol.id}-${test.id}`} // Unique key in case test appears in multiple groups
+                                                                        onClick={() => addTest(test)}
+                                                                        className="text-left p-2.5 rounded-lg border bg-white border-slate-200 hover:shadow-md transition-all flex justify-between items-center group"
+                                                                    >
+                                                                        <div>
+                                                                            <div className="text-xs font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">
+                                                                                {test.name}
+                                                                            </div>
+                                                                            <div className="text-[10px] text-slate-500 mt-0.5">
+                                                                                {eligible.coveragePercent === 1.0 ? (
+                                                                                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                                                                                        <ShieldCheck className="h-3 w-3" /> 100% Covered
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    formatCurrency(test.price)
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <PlusCircle className={`h-5 w-5 opacity-40 group-hover:opacity-100 transition-colors ${styles.replace('bg-', 'text-').replace('border-', 'text-')}`} />
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* Search Bar (Remains the same) */}
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                                        <Input
+                                            className="pl-10 h-10"
+                                            placeholder="Search tests (e.g., 'hemo')..."
+                                            value={testSearchQuery}
+                                            onChange={e => setTestSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Search Results (Remains the same) */}
+                                    {testSearchQuery && (
+                                        // ... existing search result code ...
+                                        <div className="border rounded-md divide-y divide-slate-100 max-h-60 overflow-y-auto shadow-sm">
+                                            {filteredTests.length > 0 ? filteredTests.map(test => (
+                                                <div key={test.id} className="p-3 bg-white flex justify-between items-center hover:bg-slate-50 group cursor-pointer" onClick={() => addTest(test)}>
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-sm text-slate-800">{test.name}</div>
+                                                        <div className="text-xs text-slate-500 italic mb-1">{test.description}</div>
+                                                        <div className="flex items-center gap-3">
+                                                            <Badge variant="outline" className="text-[10px] h-5 bg-slate-50 text-slate-600 border-slate-200 gap-1 font-normal">
+                                                                <FlaskConical className="h-3 w-3" /> Result in {test.turnaroundHours}h
+                                                            </Badge>
+                                                            <span className="text-xs font-bold text-blue-600">{formatCurrency(test.price)}</span>
+                                                        </div>
+                                                    </div>
+                                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-indigo-600 hover:bg-indigo-50"><PlusCircle className="h-5 w-5" /></Button>
+                                                </div>
+                                            )) : (<div className="p-4 text-center text-sm text-slate-400">No tests found.</div>)}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+
+                            {/* 3. Financial Info */}
+                            <div className="md:col-span-1">
+                                <FinancialInfoCard data={financialData} setData={setFinancialData} />
+                            </div>
+
+                            {/* 4. Private Insurance */}
+                            <div className="md:col-span-1">
+                                <PrivateInsuranceCard data={privateInsurance} onChange={setPrivateInsurance} />
+                            </div>
+
+                            {/* 5. Related Parties */}
+                            <div className="md:col-span-2">
+                                <RelatedPartiesCard />
+                            </div>
+
+
+                            {/* 7. Vital Signs */}
+                            <div className="md:col-span-2"><VitalSignsMonitor nurseName="Lan" /></div>
+
+                            {/* 8. Visual Observations */}
+                            <div className="md:col-span-2"><VisualObservationCard medicalIntents={formData.selectedIntents} /></div>
+
+
+                            {/* 10. Telehealth Dispatch */}
+                            <div className="md:col-span-2">
+                                <TelehealthDispatchCard medicalIntents={formData.selectedIntents} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT CART */}
+                {/* RIGHT SIDEBAR - ORDER CART */}
+                <div className="w-[350px] border-l bg-white shadow-2xl flex flex-col z-20 h-full fixed right-0 top-0 pt-16 md:pt-0 md:relative">
+
+                    {/* 1. CART HEADER */}
+                    <div className="p-4 border-b bg-white flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-bold text-slate-800">
+                            <ShoppingCart className="h-5 w-5 text-blue-600" />
+                            <span>Order Cart</span>
+                            <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                                {selectedTests.length}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* 2. PATIENT INFO SNAPSHOT */}
+                    <div className="bg-slate-50 p-4 border-b border-slate-100 flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
+                            <User className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                            {/* Replace 'patientData' with your actual state variable for patient name */}
+                            <h4 className="font-bold text-sm text-slate-900 truncate">
+                                {patientData.name || "New Patient"}
+                            </h4>
+                            <div className="text-xs text-slate-500 flex flex-col gap-0.5">
+                                <span>ID: <span className="font-mono text-slate-600">#PENDING</span></span>
+                                <span className="truncate">
+                                    {patientData.yob || "YYYY"} • {patientData.gender || "Gender"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. SCROLLABLE ITEM LIST */}
+                    <div className="flex-1 p-3 space-y-2 overflow-y-auto bg-slate-50/50">
+                        {selectedTests.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 opacity-60">
+                                <ShoppingCart className="h-12 w-12 stroke-1" />
+                                <p className="text-sm">Cart is empty</p>
+                            </div>
+                        ) : (
+                            selectedTests.map((t) => (
+                                <div
+                                    key={t.id}
+                                    className="group flex justify-between items-start bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
+                                >
+                                    <div className="flex-1 pr-2">
+                                        <div className="text-sm font-medium text-slate-700 leading-tight">
+                                            {t.name}
+                                        </div>
+                                        <div className="text-xs text-slate-400 mt-1">
+                                            Routine • Lab
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className="text-sm font-bold text-slate-900">
+                                            {formatCurrency(t.price)}
+                                        </span>
+
+                                        {/* REMOVE BUTTON */}
+                                        <button
+                                            onClick={() => removeTest(t.id)}
+                                            className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                                            title="Remove item"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* 4. FOOTER & TOTAL */}
+                    <div className="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-sm text-slate-500 font-medium">Total Estimate</span>
+                            <span className="text-xl font-bold text-blue-600">
+                                {formatCurrency(totalPrice)}
+                            </span>
+                        </div>
+
+                        <Button
+                            className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base font-semibold shadow-blue-200 shadow-lg"
+                            disabled={selectedTests.length === 0}
+                        >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Submit Order
+                        </Button>
+                    </div>
+                </div>
+        </TooltipProvider>
     )
 }

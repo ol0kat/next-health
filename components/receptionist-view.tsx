@@ -1031,39 +1031,39 @@ export function RelatedPartiesCard() {
     )
 }
 
-// --- 6. VITAL SIGNS (Input Bug Fixed) ---
-const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
-    <div className="relative">
-        <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
-        <div className="relative">
-            <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} />
-            <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
-        </div>
-    </div>
-)
-function VitalSignsMonitor({ nurseName }: { nurseName: string }) {
-    const { toast } = useToast()
-    const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" })
-    const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
-    const saveVitals = () => { toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" }) }
-    return (
-        <Card className="border-t-4 border-t-red-500 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4" /> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader>
-            <CardContent className="p-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} />
-                    <UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} />
-                    <div className="space-y-1">
-                        <Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label>
-                        <div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} /><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} /></div>
-                    </div>
-                    <UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} />
-                </div>
-                <Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button>
-            </CardContent>
-        </Card>
-    )
-}
+// // --- 6. VITAL SIGNS (Input Bug Fixed) ---
+// const UnitInput = ({ label, unit, value, onChange, placeholder, className, disabled = false }: any) => (
+//     <div className="relative">
+//         <Label className="text-[10px] uppercase font-semibold text-slate-500 mb-1 block">{label}</Label>
+//         <div className="relative">
+//             <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} className={cn("pr-8 h-9 font-medium focus-visible:ring-1", className)} />
+//             <span className="absolute right-3 top-2.5 text-[10px] text-slate-400 font-bold select-none">{unit}</span>
+//         </div>
+//     </div>
+// )
+// function VitalSignsMonitor({ nurseName }: { nurseName: string }) {
+//     const { toast } = useToast()
+//     const [vitals, setVitals] = useState({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" })
+//     const handleInputChange = (field: string, value: string) => setVitals(prev => ({ ...prev, [field]: value }))
+//     const saveVitals = () => { toast({ title: "Vitals Recorded", description: `Captured by ${nurseName}` }); setVitals({ height: "", weight: "", temp: "", bpSys: "", bpDia: "", pulse: "", spo2: "" }) }
+//     return (
+//         <Card className="border-t-4 border-t-red-500 shadow-sm">
+//             <CardHeader className="pb-3 border-b border-slate-50"><div className="flex justify-between items-center"><CardTitle className="text-sm uppercase text-red-600 flex items-center gap-2"><Activity className="h-4 w-4" /> Vital Signs</CardTitle><div className="text-[10px] text-slate-400">Nurse: {nurseName}</div></div></CardHeader>
+//             <CardContent className="p-4">
+//                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//                     <UnitInput label="Height" unit="cm" value={vitals.height} onChange={(v: string) => handleInputChange('height', v)} />
+//                     <UnitInput label="Weight" unit="kg" value={vitals.weight} onChange={(v: string) => handleInputChange('weight', v)} />
+//                     <div className="space-y-1">
+//                         <Label className="text-[10px] uppercase font-semibold text-slate-500">BP</Label>
+//                         <div className="flex gap-1"><Input className="h-9 w-12 px-1 text-center" placeholder="120" value={vitals.bpSys} onChange={e => handleInputChange('bpSys', e.target.value)} /><span className="text-slate-300">/</span><Input className="h-9 w-12 px-1 text-center" placeholder="80" value={vitals.bpDia} onChange={e => handleInputChange('bpDia', e.target.value)} /></div>
+//                     </div>
+//                     <UnitInput label="Temp" unit="°C" value={vitals.temp} onChange={(v: string) => handleInputChange('temp', v)} />
+//                 </div>
+//                 <Button onClick={saveVitals} className="w-full mt-4 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">Record Vitals</Button>
+//             </CardContent>
+//         </Card>
+//     )
+// }
 
 // --- 7. VISUAL OBSERVATIONS (Tags & Multi-Intent) ---
 function VisualObservationCard({ medicalIntents: selectedIntents }: { medicalIntents: string[] }) {

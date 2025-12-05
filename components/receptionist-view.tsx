@@ -621,7 +621,7 @@ export function FinancialInfoCard({ data, setData }: any) {
                     </div>
                 </div>
             )}
-        </Card>Policy 
+        </Card> 
     )
 }
 
